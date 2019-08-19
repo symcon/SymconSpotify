@@ -1,0 +1,14 @@
+{
+	"id": "{DCC40FC6-4447-AA1A-E3E5-B5F32DF81806}",
+	"name": "Spotify",
+	"type": 3,
+	"vendor": "",
+	"aliases": 
+	[
+		"Spotify"
+	],
+	"parentRequirements": [],
+	"childRequirements": [],
+	"implemented": [],
+	"prefix": "SPO"
+}

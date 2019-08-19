@@ -1,0 +1,131 @@
+{
+	"elements":
+	[
+		{
+			"name": "Token",
+			"type": "ValidationTextBox",
+			"caption": "Token"
+		}
+	],
+	"actions":
+	[
+		{
+			"type": "Button",
+			"label": "Register",
+			"onClick": "echo SPO_Register($id);"
+		},
+		{
+			"type": "RowLayout",
+			"items": [
+				{
+					"type": "ValidationTextBox",
+					"name": "SearchQuery",
+					"caption": "Search"
+				},
+				{
+					"type": "CheckBox",
+					"name": "SearchAlbums",
+					"caption": "Search for Albums",
+					"value": true
+				},
+				{
+					"type": "CheckBox",
+					"name": "SearchArtists",
+					"caption": "Search for Artists",
+					"value": true
+				},
+				{
+					"type": "CheckBox",
+					"name": "SearchPlaylists",
+					"caption": "Search for Playlists",
+					"value": true
+				},
+				{
+					"type": "CheckBox",
+					"name": "SearchTracks",
+					"caption": "Search for Tracks",
+					"value": true
+				},
+				{
+					"type": "Button",
+					"name": "Search",
+					"caption": "Start Search",
+					"onClick": "SPO_Search($id, $SearchQuery, $SearchAlbums, $SearchArtists, $SearchPlaylists, $SearchTracks);"
+				}
+			]
+		},
+		{
+			"type": "List",
+			"name": "SearchResults",
+			"caption": "Search Results",
+			"rowCount": 1,
+			"columns": [
+				{
+					"name": "type",
+					"caption": "Type",
+					"width": "140px"
+				},
+				{
+					"name": "artist",
+					"caption": "Artist",
+					"width": "auto"
+				},
+				{
+					"name": "albumPlaylist",
+					"caption": "Album/Playlist",
+					"width": "200px"
+				},
+				{
+					"name": "track",
+					"caption": "Track",
+					"width": "200px"
+				},
+				{
+					"name": "uri",
+					"caption": "URI",
+					"width": "0px",
+					"visible": false
+				}
+			]
+		},
+		{
+			"type": "Button",
+			"caption": "Add to Favorites",
+			"onClick": "SPO_AddToFavorites($id, $SearchResults);"
+		},
+		{
+			"type": "List",
+			"name": "Favorites",
+			"caption": "Favorites",
+			"rowCount": 20,
+			"columns": [
+				{
+					"name": "type",
+					"caption": "Type",
+					"width": "140px"
+				},
+				{
+					"name": "artist",
+					"caption": "Artist",
+					"width": "auto"
+				},
+				{
+					"name": "albumPlaylist",
+					"caption": "Album/Playlist",
+					"width": "200px"
+				},
+				{
+					"name": "track",
+					"caption": "Track",
+					"width": "200px"
+				},
+				{
+					"name": "uri",
+					"caption": "URI",
+					"width": "0px",
+					"visible": false
+				}
+			]
+		}
+	]
+}
