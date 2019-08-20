@@ -13,6 +13,7 @@
 			$this->RegisterPropertyString("Token", "");
 
 			$this->RegisterAttributeString("Favorites", "[]");
+			$this->RegisterAttributeString("DeviceIDs", "[]");
 
 			$profileName = "Favorites.Spotify." . $this->InstanceID;
 			if (!IPS_VariableProfileExists($profileName)) {
@@ -29,7 +30,12 @@
 			parent::ApplyChanges();
 			
 			$this->RegisterOAuth($this->oauthIdentifer);
-			$this->UpdateFavoritesProfile();
+
+			// The following updates won't work or make no sense if there is no token yet
+			if ($this->ReadPropertyString("Token") != "") {
+				$this->UpdateFavoritesProfile();
+				$this->UpdateDevices();
+			}
 		}
 
 		public function GetConfigurationForm() {
@@ -56,6 +62,21 @@
 					$this->PlayURI($favorites[$Value]["uri"]);
 					SetValue($this->GetIDForIdent($Ident), $Value);
 					break;
+
+				case "Device":
+					SetValue($this->GetIDForIdent($Ident), $Value);
+					$currentPlay = json_decode($this->MakeRequest("GET", "https://api.spotify.com/v1/me/player"), true);
+					$this->SendDebug("Current Play", json_encode($currentPlay), 0);
+					$deviceIDs = json_decode($this->ReadAttributeString("DeviceIDs"), true);
+					if ($currentPlay["is_playing"] && isset($deviceIDs[GetValue($this->GetIDForIdent("Device"))])) {
+						$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player", json_encode([
+							"device_ids" => [
+								$deviceIDs[GetValue($this->GetIDForIdent("Device"))]
+							]
+						]));
+					}
+					break;
+
 			}
 		}
 
@@ -236,6 +257,7 @@
 				$opts["http"]["content"] = $body;
 			}
 
+			$this->SendDebug("Request URL", $url, 0);
 			$this->SendDebug("Request Options", json_encode($opts), 0);
 			$context = stream_context_create($opts);
 			
@@ -257,6 +279,31 @@
 				IPS_SetVariableProfileAssociation($profileName, $index, $favorite["type"] . ": " . $favorite["albumPlaylist"], "", -1);
 			}
 		}
+
+		private function UpdateDevices() {
+			$profileName = "Devices.Spotify";
+			if (!IPS_VariableProfileExists($profileName)) {
+				IPS_CreateVariableProfile($profileName, 1);
+			}
+
+			$profile = IPS_GetVariableProfile($profileName);
+			// Delete all current associations
+			foreach ($profile["Associations"] as $association) {
+				IPS_SetVariableProfileAssociation($profileName, $association["Value"], "", "", -1);
+			}
+
+			$devices = json_decode($this->MakeRequest("GET", "https://api.spotify.com/v1/me/player/devices"), true);
+			$deviceIDs = [];
+
+			foreach($devices['devices'] as $index => $device) {
+				IPS_SetVariableProfileAssociation($profileName, $index, $device["name"], "", -1);
+				$deviceIDs[$index] = $device["id"];
+			}
+
+			$this->WriteAttributeString("DeviceIDs", json_encode($deviceIDs));
+			$this->RegisterVariableInteger("Device", $this->Translate("Device"), $profileName, 0);
+			$this->EnableAction("Device");
+		}
 		
 		public function NextTrack() {
 			
@@ -270,7 +317,13 @@
 				"context_uri" => $URI
 			];
 
-			$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player/play", json_encode($body));
+			$deviceIDs = json_decode($this->ReadAttributeString("DeviceIDs"), true);
+			$url = "https://api.spotify.com/v1/me/player/play";
+			if (isset($deviceIDs[GetValue($this->GetIDForIdent("Device"))])) {
+				$url .= "?device_id=" . urlencode($deviceIDs[GetValue($this->GetIDForIdent("Device"))]);
+			}
+
+			$this->MakeRequest("PUT", $url, json_encode($body));
 		}
 
 		public function PlayAlbum(string $Name) {
