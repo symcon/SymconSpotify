@@ -275,8 +275,23 @@
 
 			$favorites = json_decode($this->ReadAttributeString("Favorites"), true);
 			foreach($favorites as $index => $favorite) {
-				// TODO: Get proper name for tracks and artists as well
-				IPS_SetVariableProfileAssociation($profileName, $index, $favorite["type"] . ": " . $favorite["albumPlaylist"], "", -1);
+				// Get proper name, depending on type
+				$name = "";
+				switch ($favorite["type"]) {
+					case $this->Translate("Album"):
+					case $this->Translate("Playlist"):
+						$name = $favorite["albumPlaylist"];
+						break;
+
+					case $this->Translate("Artist"):
+						$name = $favorite["artist"];
+						break;
+
+					case $this->Translate("Track"):
+						$name = $favorite["track"];
+						break;
+				}
+				IPS_SetVariableProfileAssociation($profileName, $index, $favorite["type"] . ": " . $name, "", -1);
 			}
 		}
 
