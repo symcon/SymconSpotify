@@ -80,16 +80,6 @@
 			}
 		}
 
-		private function GetFormFieldByName($Form, $Name) {
-			foreach (["elements", "actions"] as $area) {
-				if (isset($form[$area])) {
-					foreach ($form[$area] as $field) {
-						if ($field["name"] == $Name) {
-							return $field;
-						}
-					}
-				}
-			}
 		}
 		
 		private function RegisterOAuth($WebOAuth) {
@@ -345,18 +335,6 @@
 			}
 
 			$this->MakeRequest("PUT", $url, json_encode($body));
-		}
-
-		public function PlayAlbum(string $Name) {
-			$album = json_decode($this->MakeRequest("GET", "https://api.spotify.com/v1/search?q=" . urlencode($Name) . "&type=album&limit=1"), true);
-
-			$uri = $album["albums"]["items"][0]["uri"];
-
-			$body = [
-				"context_uri" => $uri
-			];
-
-			$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player/play", json_encode($body));
 		}
 
 		public function Search(string $SearchQuery, bool $SearchAlbums, bool $SearchArtists, bool $SearchPlaylists, bool $SearchTracks) {
