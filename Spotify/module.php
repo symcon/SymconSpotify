@@ -208,7 +208,7 @@
 				
 			}
 
-			$this->SendDebug("FetchAccessToken", "CACHE! New Access Token is valid until ".date("d.m.y H:i:s", $Expires), 0);
+			$this->SendDebug("FetchAccessToken", "CACHE! New Access Token is valid until " . date("d.m.y H:i:s", $Expires), 0);
 			
 			//Save current Token
 			$this->SetBuffer("AccessToken", json_encode(Array("Token" => $Token, "Expires" => $Expires)));
