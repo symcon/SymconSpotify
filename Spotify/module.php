@@ -327,10 +327,16 @@
 		}
 
 		public function PlayURI(string $URI) {
-			// TODO: Special handling for tracks
-			$body = [
-				"context_uri" => $URI
-			];
+			// Special handling for tracks
+			$body = [];
+			// It seems like URI for tracks seem to start with "spotify:track", so we'll start with that
+			// If needed, we could check for track existence or something
+			if (substr($URI, 0, strlen("spotify:track")) == "spotify:track") {
+				$body["uris"] = [ $URI ];
+			}
+			else {
+				$body["context_uri"] = $URI;
+			}
 
 			$deviceIDs = json_decode($this->ReadAttributeString("DeviceIDs"), true);
 			$url = "https://api.spotify.com/v1/me/player/play";
