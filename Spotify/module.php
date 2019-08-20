@@ -5,6 +5,11 @@
 		//This one needs to be available on our OAuth client backend.
 		//Please contact us to register for an identifier: https://www.symcon.de/kontakt/#OAuth
 		private $oauthIdentifer = "spotify";
+
+		const PREVIOUS = 0;
+		const PLAY = 1;
+		const PAUSE = 2;
+		const NEXT = 3;
 		
 		public function Create() {
 			//Never delete this line!
@@ -15,13 +20,26 @@
 			$this->RegisterAttributeString("Favorites", "[]");
 			$this->RegisterAttributeString("DeviceIDs", "[]");
 
-			$profileName = "Favorites.Spotify." . $this->InstanceID;
-			if (!IPS_VariableProfileExists($profileName)) {
-				IPS_CreateVariableProfile($profileName, 1); // Integer
+			$profileNameFavorites = "Favorites.Spotify." . $this->InstanceID;
+			// Associations will be added later in ApplyChanges
+			if (!IPS_VariableProfileExists($profileNameFavorites)) {
+				IPS_CreateVariableProfile($profileNameFavorites, 1); // Integer
 			}
 
-			$this->RegisterVariableInteger("Play", $this->Translate("Play"), $profileName, 0);
+			$this->RegisterVariableInteger("Play", $this->Translate("Play"), $profileNameFavorites, 0);
 			$this->EnableAction("Play");
+
+			$profileNameActions = "Actions.Spotify";
+			if (!IPS_VariableProfileExists($profileNameActions)) {
+				IPS_CreateVariableProfile($profileNameActions, 1); // Integer
+				IPS_SetVariableProfileAssociation($profileNameActions, self::PREVIOUS, "⏮", "", -1);
+				IPS_SetVariableProfileAssociation($profileNameActions, self::PLAY, "⏵", "", -1);
+				IPS_SetVariableProfileAssociation($profileNameActions, self::PAUSE, "⏸", "", -1);
+				IPS_SetVariableProfileAssociation($profileNameActions, self::NEXT, "⏭", "", -1);
+			}
+
+			$this->RegisterVariableInteger("Action", $this->Translate("Action"), $profileNameActions, 0);
+			$this->EnableAction("Action");
 
 		}
 	
@@ -31,10 +49,14 @@
 			
 			$this->RegisterOAuth($this->oauthIdentifer);
 
+			SetValue($this->GetIDForIdent("Action"), self::PAUSE);
 			// The following updates won't work or make no sense if there is no token yet
 			if ($this->ReadPropertyString("Token") != "") {
 				$this->UpdateFavoritesProfile();
 				$this->UpdateDevices();
+				if ($this->isPlaybackActive()) {
+					SetValue($this->GetIDForIdent("Action"), self::PLAY);
+				}
 			}
 		}
 
@@ -65,10 +87,8 @@
 
 				case "Device":
 					SetValue($this->GetIDForIdent($Ident), $Value);
-					$currentPlay = json_decode($this->MakeRequest("GET", "https://api.spotify.com/v1/me/player"), true);
-					$this->SendDebug("Current Play", json_encode($currentPlay), 0);
 					$deviceIDs = json_decode($this->ReadAttributeString("DeviceIDs"), true);
-					if ($currentPlay["is_playing"] && isset($deviceIDs[GetValue($this->GetIDForIdent("Device"))])) {
+					if ($this->isPlaybackActive() && isset($deviceIDs[GetValue($this->GetIDForIdent("Device"))])) {
 						$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player", json_encode([
 							"device_ids" => [
 								$deviceIDs[GetValue($this->GetIDForIdent("Device"))]
@@ -77,9 +97,36 @@
 					}
 					break;
 
+				case "Action":
+					switch ($Value) {
+						case self::PLAY:
+							$this->Play();
+							break;
+							
+						case self::PAUSE:
+							$this->Pause();
+							break;
+						
+						case self::NEXT:
+							$this->NextTrack();
+							break;
+							
+						case self::PREVIOUS:
+							$this->PreviousTrack();
+							break;
+						
+					}
+
 			}
 		}
 
+		private function requestCurrentPlay() {
+			return json_decode($this->MakeRequest("GET", "https://api.spotify.com/v1/me/player"), true);
+		}
+
+		private function isPlaybackActive() {
+			$currentPlay = $this->requestCurrentPlay();
+			return $currentPlay && $currentPlay["is_playing"];
 		}
 		
 		private function RegisterOAuth($WebOAuth) {
@@ -310,10 +357,22 @@
 			$this->EnableAction("Device");
 		}
 		
+		public function Play() {
+			$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player/play");
+			SetValue($this->GetIDForIdent("Action"), self::PLAY);
+		}
+		
+		public function Pause() {
+			$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player/pause");
+			SetValue($this->GetIDForIdent("Action"), self::PAUSE);
+		}
+		
+		public function PreviousTrack() {
+			$this->MakeRequest("POST", "https://api.spotify.com/v1/me/player/previous");
+		}
+		
 		public function NextTrack() {
-			
 			$this->MakeRequest("POST", "https://api.spotify.com/v1/me/player/next");
-			
 		}
 
 		public function PlayURI(string $URI) {
@@ -335,6 +394,7 @@
 			}
 
 			$this->MakeRequest("PUT", $url, json_encode($body));
+			SetValue($this->GetIDForIdent("Action"), self::PLAY);
 		}
 
 		public function Search(string $SearchQuery, bool $SearchAlbums, bool $SearchArtists, bool $SearchPlaylists, bool $SearchTracks) {
