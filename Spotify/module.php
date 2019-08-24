@@ -84,8 +84,23 @@
 				if (isset($form[$area])) {
 					foreach ($form[$area] as $index => $field) {
 						if (isset($field["name"]) && ($field["name"] == "Favorites")) {
-							$this->SendDebug("ConfigurationForm", "Found Favorites!", 0);
 							$form[$area][$index]["values"] = json_decode($this->ReadAttributeString("Favorites"));
+						}
+						elseif (isset($field["name"]) && ($field["name"] == "UserPlaylists")) {
+							// Try block as a user could not be registered yet. In that case, we want to move on and just not fill the playlists
+							if ($this->ReadPropertyString('Token')) {
+								$playlists = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/playlists'), true);
+								$userPlaylists = [];
+								foreach ($playlists['items'] as $playlist) {
+									$userPlaylists[] = [
+										'playlist' => $playlist['name'],
+										'tracks' => strval($playlist['tracks']['total']),
+										'owner' => $playlist['owner']['display_name'],
+										'uri' => $playlist['uri']
+									];
+								}
+								$form[$area][$index]['values'] = $userPlaylists;
+							}
 						}
 					}
 				}
@@ -522,6 +537,17 @@
 			$this->WriteAttributeString("Favorites", json_encode($favorites));
 			$this->UpdateFormField("Favorites", "values", json_encode($favorites));
 			$this->UpdateFavoritesProfile();
+		}
+
+		public function AddPlaylistToFavorites($Playlist) {
+			$newFavorite = [
+				'type' => $this->Translate('Playlist'),
+				'artist' => $Playlist['owner'],
+				'albumPlaylist' => $Playlist['playlist'],
+				'track' => '-',
+				'uri' => $Playlist['uri']
+			];
+			$this->AddToFavorites($newFavorite);
 		}
 
 		public function RemoveFavorite(string $FavoriteURI) {

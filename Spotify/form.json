@@ -95,6 +95,43 @@
 		},
 		{
 			"type": "List",
+			"name": "UserPlaylists",
+			"caption": "Your Playlists",
+			"rowCount": 5,
+			"columns": [
+				{
+					"name": "playlist",
+					"caption": "Playlist",
+					"width": "auto"
+				},
+				{
+					"name": "tracks",
+					"caption": "Tracks",
+					"width": "200px"
+				},
+				{
+					"name": "uri",
+					"caption": "URI",
+					"width": "0px",
+					"visible": false
+				},
+				{
+					"name": "owner",
+					"caption": "Owner",
+					"width": "0px",
+					"visible": false
+				},
+				{
+					"name": "add",
+					"caption": "",
+					"width": "30px",
+					"onClick": "SPO_AddPlaylistToFavorites($id, $UserPlaylists);",
+					"add": "★"
+				}
+			]
+		},
+		{
+			"type": "List",
 			"name": "Favorites",
 			"caption": "Favorites",
 			"rowCount": 20,
