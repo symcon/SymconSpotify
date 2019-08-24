@@ -124,6 +124,13 @@
 					"caption": "URI",
 					"width": "0px",
 					"visible": false
+				},
+				{
+					"name": "delete",
+					"caption": "",
+					"width": "30px",
+					"onClick": "SPO_RemoveFavorite($id, $Favorites['uri']);",
+					"add": "🗑"
 				}
 			]
 		}

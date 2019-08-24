@@ -10,6 +10,10 @@
 		const PLAY = 1;
 		const PAUSE = 2;
 		const NEXT = 3;
+
+		const REPEAT_OFF = 0;
+		const REPEAT_CONTEXT = 1;
+		const REPEAT_TRACK = 2;
 		
 		public function Create() {
 			//Never delete this line!
@@ -41,6 +45,19 @@
 			$this->RegisterVariableInteger("Action", $this->Translate("Action"), $profileNameActions, 0);
 			$this->EnableAction("Action");
 
+			$profileNameRepeat = "Repeat.Spotify";
+			if (!IPS_VariableProfileExists($profileNameRepeat)) {
+				IPS_CreateVariableProfile($profileNameRepeat, 1); // Integer
+				IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_OFF, $this->Translate("Off"), "", -1);
+				IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_CONTEXT, $this->Translate("Context"), "", -1);
+				IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_TRACK, $this->Translate("Track"), "", -1);
+			}
+			$this->RegisterVariableInteger("Repeat", $this->Translate("Repeat"), $profileNameRepeat, 0);
+			$this->EnableAction("Repeat");
+
+			$this->RegisterVariableBoolean("Shuffle", $this->Translate("Shuffle"), "~Switch", 0);
+			$this->EnableAction("Shuffle");
+
 		}
 	
 		public function ApplyChanges() {
@@ -49,13 +66,13 @@
 			
 			$this->RegisterOAuth($this->oauthIdentifer);
 
-			SetValue($this->GetIDForIdent("Action"), self::PAUSE);
+			$this->SetValue("Action", self::PAUSE);
 			// The following updates won't work or make no sense if there is no token yet
 			if ($this->ReadPropertyString("Token") != "") {
 				$this->UpdateFavoritesProfile();
 				$this->UpdateDevices();
 				if ($this->isPlaybackActive()) {
-					SetValue($this->GetIDForIdent("Action"), self::PLAY);
+					$this->SetValue("Action", self::PLAY);
 				}
 			}
 		}
@@ -82,17 +99,15 @@
 				case "Play":
 					$favorites = json_decode($this->ReadAttributeString("Favorites"), true);
 					$this->PlayURI($favorites[$Value]["uri"]);
-					SetValue($this->GetIDForIdent($Ident), $Value);
+					$this->SetValue($Ident, $Value);
 					break;
 
 				case "Device":
-					SetValue($this->GetIDForIdent($Ident), $Value);
-					$deviceIDs = json_decode($this->ReadAttributeString("DeviceIDs"), true);
-					if ($this->isPlaybackActive() && isset($deviceIDs[GetValue($this->GetIDForIdent("Device"))])) {
+					$this->SetValue($Ident, $Value);
+					$deviceID = $this->getCurrentDeviceID();
+					if ($this->isPlaybackActive() && $deviceID) {
 						$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player", json_encode([
-							"device_ids" => [
-								$deviceIDs[GetValue($this->GetIDForIdent("Device"))]
-							]
+							"device_ids" => [ $deviceID ]
 						]));
 					}
 					break;
@@ -116,7 +131,26 @@
 							break;
 						
 					}
+					break;
 
+				case "Repeat":
+					$this->SetRepeat($Value);
+					break;
+
+				case "Shuffle":
+					$this->SetShuffle($Value);
+					break;
+
+			}
+		}
+
+		private function getCurrentDeviceID() {
+			$deviceIDs = json_decode($this->ReadAttributeString("DeviceIDs"), true);
+			if (isset($deviceIDs[GetValue($this->GetIDForIdent("Device"))])) {
+				return urlencode($deviceIDs[GetValue($this->GetIDForIdent("Device"))]);
+			}
+			else {
+				return "";
 			}
 		}
 
@@ -359,12 +393,12 @@
 		
 		public function Play() {
 			$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player/play");
-			SetValue($this->GetIDForIdent("Action"), self::PLAY);
+			$this->SetValue("Action", self::PLAY);
 		}
 		
 		public function Pause() {
 			$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player/pause");
-			SetValue($this->GetIDForIdent("Action"), self::PAUSE);
+			$this->SetValue("Action", self::PAUSE);
 		}
 		
 		public function PreviousTrack() {
@@ -387,14 +421,14 @@
 				$body["context_uri"] = $URI;
 			}
 
-			$deviceIDs = json_decode($this->ReadAttributeString("DeviceIDs"), true);
+			$deviceID = $this->getCurrentDeviceID();
 			$url = "https://api.spotify.com/v1/me/player/play";
-			if (isset($deviceIDs[GetValue($this->GetIDForIdent("Device"))])) {
-				$url .= "?device_id=" . urlencode($deviceIDs[GetValue($this->GetIDForIdent("Device"))]);
+			if ($deviceID) {
+				$url .= "?device_id=" . $deviceID;
 			}
 
 			$this->MakeRequest("PUT", $url, json_encode($body));
-			SetValue($this->GetIDForIdent("Action"), self::PLAY);
+			$this->SetValue("Action", self::PLAY);
 		}
 
 		public function Search(string $SearchQuery, bool $SearchAlbums, bool $SearchArtists, bool $SearchPlaylists, bool $SearchTracks) {
@@ -481,12 +515,54 @@
 			$this->UpdateFormField("SearchResults", "rowCount", 20);
 		}
 
-		public function AddToFavorites($favorite) {
-			$favorites = json_decode($this->ReadAttributeString("Favorites"));
-			$favorites[] = $favorite;
+		public function AddToFavorites($Favorite) {
+			unset($Favorite["delete"]);
+			$favorites = json_decode($this->ReadAttributeString("Favorites"), true);
+			// TODO: Check if already in favorites before adding a new one
+			$favorites[] = $Favorite;
 			$this->WriteAttributeString("Favorites", json_encode($favorites));
 			$this->UpdateFormField("Favorites", "values", json_encode($favorites));
 			$this->UpdateFavoritesProfile();
+		}
+
+		public function RemoveFavorite(string $FavoriteURI) {
+			$favorites = json_decode($this->ReadAttributeString("Favorites"), true);
+			foreach ($favorites as $index => $favorite) {
+				if ($favorite["uri"] == $FavoriteURI) {
+					array_splice($favorites, $index, 1);
+					$this->WriteAttributeString("Favorites", json_encode($favorites));
+					$this->UpdateFormField("Favorites", "values", json_encode($favorites));
+					$this->UpdateFavoritesProfile();
+					break;
+				}
+			}
+
+		}
+
+		public function SetRepeat(int $Repeat) {
+			$url = "https://api.spotify.com/v1/me/player/repeat?state=";
+			switch ($Repeat) {
+				case self::REPEAT_OFF:
+					$url .= "off";
+					break;
+					
+				case self::REPEAT_CONTEXT:
+					$url .= "context";
+					break;
+				
+				case self::REPEAT_TRACK:
+					$url .= "track";
+					break;
+					
+			}
+
+			$this->MakeRequest("PUT", $url);
+			$this->SetValue("Repeat", $Repeat);
+		}
+
+		public function SetShuffle(bool $Shuffle) {
+			$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player/shuffle?state=" . json_encode($Shuffle));
+			$this->SetValue("Shuffle", $Shuffle);
 		}
 		
 	}
