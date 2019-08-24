@@ -516,7 +516,6 @@
 		}
 
 		public function AddToFavorites($Favorite) {
-			unset($Favorite["delete"]);
 			$favorites = json_decode($this->ReadAttributeString("Favorites"), true);
 			// TODO: Check if already in favorites before adding a new one
 			$favorites[] = $Favorite;
