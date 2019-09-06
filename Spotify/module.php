@@ -19,6 +19,7 @@
 			//Never delete this line!
 			parent::Create();
 
+			$this->RegisterPropertyInteger("UpdateInterval", 60);
 			
 			$this->RegisterAttributeString("Token", "");
 			$this->RegisterAttributeString("Favorites", "[]");
@@ -30,8 +31,16 @@
 				IPS_CreateVariableProfile($profileNameFavorites, 1); // Integer
 			}
 
+			$profileNameDevices = "Devices.Spotify";
+			if (!IPS_VariableProfileExists($profileNameDevices)) {
+				IPS_CreateVariableProfile($profileNameDevices, 1);
+			}
+
 			$this->RegisterVariableInteger("Play", $this->Translate("Play"), $profileNameFavorites, 0);
 			$this->EnableAction("Play");
+
+			$this->RegisterVariableInteger("Device", $this->Translate("Device"), $profileNameDevices, 0);
+			$this->EnableAction("Device");
 
 			$profileNameActions = "Actions.Spotify";
 			if (!IPS_VariableProfileExists($profileNameActions)) {
@@ -58,6 +67,8 @@
 			$this->RegisterVariableBoolean("Shuffle", $this->Translate("Shuffle"), "~Switch", 0);
 			$this->EnableAction("Shuffle");
 
+			$this->RegisterTimer("UpdateTimer", 0, 'SPO_UpdateVariables($_IPS["TARGET"]);');
+
 		}
 	
 		public function ApplyChanges() {
@@ -66,15 +77,13 @@
 			
 			$this->RegisterOAuth($this->oauthIdentifer);
 
-			$this->SetValue("Action", self::PAUSE);
-			// The following updates won't work or make no sense if there is no token yet
 			if ($this->ReadAttributeString("Token") != "") {
 				$this->UpdateFavoritesProfile();
-				$this->UpdateDevices();
-				if ($this->isPlaybackActive()) {
-					$this->SetValue("Action", self::PLAY);
-				}
 			}
+
+			$this->UpdateVariables();
+
+			$this->SetTimerInterval("UpdateTimer", $this->ReadPropertyInteger('UpdateInterval') * 1000);
 		}
 
 		public function GetConfigurationForm() {
@@ -173,8 +182,10 @@
 			return json_decode($this->MakeRequest("GET", "https://api.spotify.com/v1/me/player"), true);
 		}
 
-		private function isPlaybackActive() {
-			$currentPlay = $this->requestCurrentPlay();
+		private function isPlaybackActive($currentPlay = false) {
+			if ($currentPlay === false) {
+				$currentPlay = $this->requestCurrentPlay();
+			}
 			return $currentPlay && $currentPlay["is_playing"];
 		}
 		
@@ -400,6 +411,9 @@
 			foreach($devices['devices'] as $index => $device) {
 				IPS_SetVariableProfileAssociation($profileName, $index, $device["name"], "", -1);
 				$deviceIDs[$index] = $device["id"];
+				if ($device['is_active']) {
+					$this->SetValue("Device", $index);
+				}
 			}
 
 			$this->WriteAttributeString("DeviceIDs", json_encode($deviceIDs));
@@ -589,6 +603,44 @@
 		public function SetShuffle(bool $Shuffle) {
 			$this->MakeRequest("PUT", "https://api.spotify.com/v1/me/player/shuffle?state=" . json_encode($Shuffle));
 			$this->SetValue("Shuffle", $Shuffle);
+		}
+
+		public function UpdateVariables() {
+			// The following updates won't work or make no sense if there is no token yet
+			if ($this->ReadAttributeString("Token") != "") {
+				$this->UpdateFavoritesProfile();
+				$this->UpdateDevices();
+
+				$currentPlay = $this->requestCurrentPlay();
+				if ($this->isPlaybackActive($currentPlay)) {
+					$this->SetValue("Action", self::PLAY);
+					switch ($currentPlay["repeat_state"]) {
+						case 'off':
+							$this->SetValue("Repeat", self::REPEAT_OFF);
+							break;
+
+						case 'track':
+							$this->SetValue("Repeat", self::REPEAT_TRACK);
+							break;
+
+						case 'context':
+							$this->SetValue("Repeat", self::REPEAT_CONTEXT);
+							break;
+					}
+
+					$this->SetValue("Shuffle", $currentPlay["shuffle_state"]);
+				}
+				else {
+					$this->SetValue("Action", self::PAUSE);
+					$this->SetValue("Repeat", self::REPEAT_OFF);
+					$this->SetValue("Shuffle", false);
+				}
+			}
+			else {
+				$this->SetValue("Action", self::PAUSE);
+				$this->SetValue("Repeat", self::REPEAT_OFF);
+				$this->SetValue("Shuffle", false);
+			}
 		}
 		
 	}

@@ -2,6 +2,16 @@
 	"elements":
 	[
 		{
+			"type": "ExpansionPanel",
+			"caption": "Advanced Settings",
+			"items": [
+				{
+					"name": "UpdateInterval",
+					"type": "NumberSpinner",
+					"caption": "Update Interval",
+					"suffix": "seconds"
+				}
+			]
 		}
 	],
 	"actions":
