@@ -344,8 +344,11 @@
 			$this->SendDebug("Request URL", $url, 0);
 			$this->SendDebug("Request Options", json_encode($opts), 0);
 			$context = stream_context_create($opts);
+
+			$response = file_get_contents($url, false, $context);
+			$this->SendDebug("Response", $response, 0);
 			
-			return file_get_contents($url, false, $context);	
+			return $response;
 		}
 
 		private function UpdateFavoritesProfile() {
