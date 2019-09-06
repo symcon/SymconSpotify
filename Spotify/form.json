@@ -2,9 +2,6 @@
 	"elements":
 	[
 		{
-			"name": "Token",
-			"type": "ValidationTextBox",
-			"caption": "Token"
 		}
 	],
 	"actions":

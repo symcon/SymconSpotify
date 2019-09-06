@@ -18,9 +18,9 @@
 		public function Create() {
 			//Never delete this line!
 			parent::Create();
-			
-			$this->RegisterPropertyString("Token", "");
 
+			
+			$this->RegisterAttributeString("Token", "");
 			$this->RegisterAttributeString("Favorites", "[]");
 			$this->RegisterAttributeString("DeviceIDs", "[]");
 
@@ -68,7 +68,7 @@
 
 			$this->SetValue("Action", self::PAUSE);
 			// The following updates won't work or make no sense if there is no token yet
-			if ($this->ReadPropertyString("Token") != "") {
+			if ($this->ReadAttributeString("Token") != "") {
 				$this->UpdateFavoritesProfile();
 				$this->UpdateDevices();
 				if ($this->isPlaybackActive()) {
@@ -88,7 +88,7 @@
 						}
 						elseif (isset($field["name"]) && ($field["name"] == "UserPlaylists")) {
 							// Try block as a user could not be registered yet. In that case, we want to move on and just not fill the playlists
-							if ($this->ReadPropertyString('Token')) {
+							if ($this->ReadAttributeString('Token')) {
 								$playlists = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/playlists'), true);
 								$userPlaylists = [];
 								foreach ($playlists['items'] as $playlist) {
@@ -254,8 +254,7 @@
 				
 				$this->SendDebug("ProcessOAuthData", "OK! Let's save the Refresh Token permanently", 0);
 
-				IPS_SetProperty($this->InstanceID, "Token", $token);
-				IPS_ApplyChanges($this->InstanceID);
+				$this->WriteAttributeString("Token", $token);
 			
 			} else {
 				
@@ -288,7 +287,7 @@
 					"http" => array(
 						"header" => "Content-Type: application/x-www-form-urlencoded\r\n",
 						"method"  => "POST",
-						"content" => http_build_query(Array("refresh_token" => $this->ReadPropertyString("Token")))
+						"content" => http_build_query(Array("refresh_token" => $this->ReadAttributeString("Token")))
 					)
 				);
 				$context = stream_context_create($options);
@@ -308,8 +307,7 @@
 				if(isset($data->refresh_token)) {
 					$this->SendDebug("FetchAccessToken", "NEW! Let's save the updated Refresh Token permanently", 0);
 
-					IPS_SetProperty($this->InstanceID, "Token", $data->refresh_token);
-					IPS_ApplyChanges($this->InstanceID);
+					$this->WriteAttributeString("Token", $data->refresh_token);
 				}
 				
 				
