@@ -642,6 +642,10 @@
 				$this->SetValue("Shuffle", false);
 			}
 		}
+
+		public function ResetToken() {
+			$this->WriteAttributeString('Token', '');
+		}
 		
 	}
 
