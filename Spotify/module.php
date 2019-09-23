@@ -88,18 +88,23 @@
 
 		public function GetConfigurationForm() {
 			$form = json_decode(file_get_contents(__DIR__ . "/form.json"), true);
-
-			foreach (["elements", "actions"] as $area) {
-				if (isset($form[$area])) {
-					foreach ($form[$area] as $index => $field) {
-						if (isset($field["name"]) && ($field["name"] == "Favorites")) {
-							$form[$area][$index]["values"] = json_decode($this->ReadAttributeString("Favorites"));
-						}
-						elseif (isset($field["name"]) && ($field["name"] == "UserPlaylists")) {
-							// Try block as a user could not be registered yet. In that case, we want to move on and just not fill the playlists
-							if ($this->ReadAttributeString('Token')) {
+			
+			if (!$this->ReadAttributeString('Token')) {
+				for ($i = 1; $i < sizeof($form['actions']); $i++) {
+					$form['actions'][$i]['visible'] = false;
+				}
+			}
+			else {
+				foreach (["elements", "actions"] as $area) {
+					if (isset($form[$area])) {
+						foreach ($form[$area] as $index => $field) {
+							if (isset($field["name"]) && ($field["name"] == "Favorites")) {
+								$form[$area][$index]["values"] = json_decode($this->ReadAttributeString("Favorites"));
+							}
+							elseif (isset($field["name"]) && ($field["name"] == "UserPlaylists")) {
 								$this->SendDebug("Enter", 'If Block', 0);
 								
+								// TODO: Try block as a user could not be registered properly. In that case, we want to give some meaningful feedback
 								try {
 									$playlists = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/playlists'), true);
 									$userPlaylists = [];
@@ -273,6 +278,8 @@
 				$this->SendDebug("ProcessOAuthData", "OK! Let's save the Refresh Token permanently", 0);
 
 				$this->WriteAttributeString("Token", $token);
+
+				$this->ReloadForm();
 			
 			} else {
 				
