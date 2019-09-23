@@ -98,17 +98,24 @@
 						elseif (isset($field["name"]) && ($field["name"] == "UserPlaylists")) {
 							// Try block as a user could not be registered yet. In that case, we want to move on and just not fill the playlists
 							if ($this->ReadAttributeString('Token')) {
-								$playlists = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/playlists'), true);
-								$userPlaylists = [];
-								foreach ($playlists['items'] as $playlist) {
-									$userPlaylists[] = [
-										'playlist' => $playlist['name'],
-										'tracks' => strval($playlist['tracks']['total']),
-										'owner' => $playlist['owner']['display_name'],
-										'uri' => $playlist['uri']
-									];
+								$this->SendDebug("Enter", 'If Block', 0);
+								
+								try {
+									$playlists = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/playlists'), true);
+									$userPlaylists = [];
+									foreach ($playlists['items'] as $playlist) {
+										$userPlaylists[] = [
+											'playlist' => $playlist['name'],
+											'tracks' => strval($playlist['tracks']['total']),
+											'owner' => $playlist['owner']['display_name'],
+											'uri' => $playlist['uri']
+										];
+									}
+									$form[$area][$index]['values'] = $userPlaylists;
 								}
-								$form[$area][$index]['values'] = $userPlaylists;
+								catch (Exception $e) {
+
+								}
 							}
 						}
 					}
@@ -238,7 +245,7 @@
 			$data = json_decode($result);
 			
 			if(!isset($data->token_type) || $data->token_type != "Bearer") {
-				die("Bearer Token expected");
+				throw new Exception("Bearer Token expected");
 			}
 			
 			//Save temporary access token
@@ -307,7 +314,7 @@
 				$data = json_decode($result);
 				
 				if(!isset($data->token_type) || $data->token_type != "Bearer") {
-					die("Bearer Token expected");
+					throw new Exception("Bearer Token expected");
 				}
 				
 				//Update parameters to properly cache it in the next step
