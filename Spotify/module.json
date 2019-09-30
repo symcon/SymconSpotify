@@ -10,5 +10,6 @@
 	"parentRequirements": [],
 	"childRequirements": [],
 	"implemented": [],
-	"prefix": "SPO"
+	"prefix": "SPO",
+	"url": "https://github.com/DrNiels/SymconSpotify/tree/master/Spotify"
 }
