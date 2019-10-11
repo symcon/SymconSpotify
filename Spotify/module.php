@@ -39,8 +39,8 @@ declare(strict_types=1);
                 IPS_CreateVariableProfile($profileNameDevices, 1);
             }
 
-            $this->RegisterVariableInteger('Play', $this->Translate('Play'), $profileNameFavorites, 0);
-            $this->EnableAction('Play');
+            $this->RegisterVariableInteger('Favorite', $this->Translate('Favorite'), $profileNameFavorites, 0);
+            $this->EnableAction('Favorite');
 
             $this->RegisterVariableInteger('Device', $this->Translate('Device'), $profileNameDevices, 0);
             $this->EnableAction('Device');
@@ -133,7 +133,7 @@ declare(strict_types=1);
         public function RequestAction($Ident, $Value)
         {
             switch ($Ident) {
-                case 'Play':
+                case 'Favorite':
                     $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
                     $this->PlayURI($favorites[$Value]['uri']);
                     $this->SetValue($Ident, $Value);
