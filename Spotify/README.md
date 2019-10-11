@@ -42,11 +42,13 @@ Initial muss das Modul durch einen Klick auf den Button "Registrieren" mit einem
 
 
 ___Erweiterte Einstellungen___
+
 Name                     | Beschreibung
 ------------------------ | ---------------------------------
 Aktualisierungsintervall | In diesem Intervall werden die Werte der Statusvariablen mit der aktuellen Wiedergabe von Spotify abgeglichen. Dies beinhaltet das Gerät, Wiedergabe oder Pause, Zufallswiedergabe und Wiederholung
 
 ___Suche___
+
 Name                     | Beschreibung
 ------------------------ | ---------------------------------
 Suche                    | In diesem Feld wird ein Suchbegriff für eine Suche eingegeben
