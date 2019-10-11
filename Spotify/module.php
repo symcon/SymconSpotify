@@ -446,13 +446,14 @@ declare(strict_types=1);
 
         public function Play()
         {
-            $deviceID = $this->getCurrentDeviceID();
-            $url = 'https://api.spotify.com/v1/me/player/play';
-            if ($deviceID) {
-                $url .= '?device_id=' . $deviceID;
+            $currentPlay = $this->requestCurrentPlay();
+            if ($currentPlay) {
+                $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/play');
+                $this->SetValue('Action', self::PLAY);
             }
-            $this->MakeRequest('PUT', $url);
-            $this->SetValue('Action', self::PLAY);
+            else {
+                RequestAction($this->GetIDForIdent('Favorite'), $this->GetValue('Favorite'));
+            }
         }
 
         public function Pause()
