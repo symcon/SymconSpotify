@@ -28,13 +28,13 @@ declare(strict_types=1);
             $this->RegisterAttributeString('Favorites', '[]');
             $this->RegisterAttributeString('DeviceIDs', '[]');
 
-            $profileNameFavorites = 'Favorites.Spotify.' . $this->InstanceID;
+            $profileNameFavorites = 'Spotify.Favorites.' . $this->InstanceID;
             // Associations will be added later in ApplyChanges
             if (!IPS_VariableProfileExists($profileNameFavorites)) {
                 IPS_CreateVariableProfile($profileNameFavorites, 1); // Integer
             }
 
-            $profileNameDevices = 'Devices.Spotify';
+            $profileNameDevices = 'Spotify.Devices';
             if (!IPS_VariableProfileExists($profileNameDevices)) {
                 IPS_CreateVariableProfile($profileNameDevices, 1);
             }
@@ -45,7 +45,7 @@ declare(strict_types=1);
             $this->RegisterVariableInteger('Device', $this->Translate('Device'), $profileNameDevices, 0);
             $this->EnableAction('Device');
 
-            $profileNameActions = 'Actions.Spotify';
+            $profileNameActions = 'Spotify.Actions';
             if (!IPS_VariableProfileExists($profileNameActions)) {
                 IPS_CreateVariableProfile($profileNameActions, 1); // Integer
                 IPS_SetVariableProfileAssociation($profileNameActions, self::PREVIOUS, '⏮', '', -1);
@@ -57,7 +57,7 @@ declare(strict_types=1);
             $this->RegisterVariableInteger('Action', $this->Translate('Action'), $profileNameActions, 0);
             $this->EnableAction('Action');
 
-            $profileNameRepeat = 'Repeat.Spotify';
+            $profileNameRepeat = 'Spotify.Repeat';
             if (!IPS_VariableProfileExists($profileNameRepeat)) {
                 IPS_CreateVariableProfile($profileNameRepeat, 1); // Integer
                 IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_OFF, $this->Translate('Off'), '', -1);
@@ -385,7 +385,7 @@ declare(strict_types=1);
 
         private function UpdateFavoritesProfile()
         {
-            $profileName = 'Favorites.Spotify.' . $this->InstanceID;
+            $profileName = 'Spotify.Favorites.' . $this->InstanceID;
             $profile = IPS_GetVariableProfile($profileName);
 
             // Delete all current associations
@@ -394,6 +394,9 @@ declare(strict_types=1);
             }
 
             $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
+
+            $this->SendDebug('Favorites', json_encode($favorites), 0);
+
             foreach ($favorites as $index => $favorite) {
                 // Get proper name, depending on type
                 $name = '';
@@ -417,7 +420,7 @@ declare(strict_types=1);
 
         private function UpdateDevices()
         {
-            $profileName = 'Devices.Spotify';
+            $profileName = 'Spotify.Devices';
             if (!IPS_VariableProfileExists($profileName)) {
                 IPS_CreateVariableProfile($profileName, 1);
             }
