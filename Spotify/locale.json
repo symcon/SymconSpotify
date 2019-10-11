@@ -1,0 +1,26 @@
+{
+    "translations": {
+        "de": { 
+            "Advanced Settings": "Erweiterte Einstellungen",
+            "Update Interval": "Aktualisierungsintervall",
+            "seconds": "Sekunden",
+            "Register": "Registrieren",
+            "Search": "Suche",
+            "Search for Albums": "Suche nach Alben",
+            "Search for Artists": "Suche nach Künstlern",
+            "Search for Playlists": "Suche nach Playlists",
+            "Search for Tracks": "Suche nach Songs",
+            "Start Search": "Suche starten",
+            "Search Results": "Suchergebnisse",
+            "Type": "Typ",
+            "Artist": "Künstler",
+            "Album/Playlist": "Album/Playlist",
+            "Track": "Song",
+            "Favorite": "Favorit",
+            "Your Playlists": "Ihre Playlists",
+            "Playlist": "Playlist",
+            "Tracks": "Songs",
+            "Favorites": "Favoriten"
+        }
+    }
+}
