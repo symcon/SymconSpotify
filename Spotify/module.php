@@ -49,8 +49,8 @@ declare(strict_types=1);
             if (!IPS_VariableProfileExists($profileNameActions)) {
                 IPS_CreateVariableProfile($profileNameActions, 1); // Integer
                 IPS_SetVariableProfileAssociation($profileNameActions, self::PREVIOUS, '⏮', '', -1);
-                IPS_SetVariableProfileAssociation($profileNameActions, self::PLAY, '⏵', '', -1);
-                IPS_SetVariableProfileAssociation($profileNameActions, self::PAUSE, '⏸', '', -1);
+                IPS_SetVariableProfileAssociation($profileNameActions, self::PLAY, 'Play', '', -1);
+                IPS_SetVariableProfileAssociation($profileNameActions, self::PAUSE, 'Pause', '', -1);
                 IPS_SetVariableProfileAssociation($profileNameActions, self::NEXT, '⏭', '', -1);
             }
 
