@@ -20,7 +20,15 @@
             "Your Playlists": "Ihre Playlists",
             "Playlist": "Playlist",
             "Tracks": "Songs",
-            "Favorites": "Favoriten"
+            "Favorites": "Favoriten",
+            "Album": "Album",
+            "Device": "Gerät",
+            "No types selected": "Keine Typen ausgewählt",
+            "Action": "Aktion",
+            "Off": "Aus",
+            "Context": "Kontext",
+            "Repeat": "Wiederholen",
+            "Shuffle": "Zufällige Wiedergabe"
         }
     }
 }
