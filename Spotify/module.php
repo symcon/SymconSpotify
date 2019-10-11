@@ -4,10 +4,6 @@ declare(strict_types=1);
 
     class Spotify extends IPSModule
     {
-        //This one needs to be available on our OAuth client backend.
-        //Please contact us to register for an identifier: https://www.symcon.de/kontakt/#OAuth
-        private $oauthIdentifer = 'spotify';
-
         const PREVIOUS = 0;
         const PLAY = 1;
         const PAUSE = 2;
@@ -16,6 +12,10 @@ declare(strict_types=1);
         const REPEAT_OFF = 0;
         const REPEAT_CONTEXT = 1;
         const REPEAT_TRACK = 2;
+        
+        //This one needs to be available on our OAuth client backend.
+        //Please contact us to register for an identifier: https://www.symcon.de/kontakt/#OAuth
+        private $oauthIdentifer = 'spotify';
 
         public function Create()
         {
@@ -182,11 +182,320 @@ declare(strict_types=1);
             }
         }
 
-        private function isFavorite($URI) {
+        /**
+         * This function will be called by the register button on the property page!
+         */
+        public function Register()
+        {
+
+            //Return everything which will open the browser
+            return 'https://oauth.ipmagic.de/authorize/' . $this->oauthIdentifer . '?username=' . urlencode(IPS_GetLicensee());
+        }
+
+        public function Play()
+        {
+            $currentPlay = $this->requestCurrentPlay();
+            if ($currentPlay) {
+                $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/play');
+                $this->SetValue('Action', self::PLAY);
+            } else {
+                RequestAction($this->GetIDForIdent('Favorite'), $this->GetValue('Favorite'));
+            }
+        }
+
+        public function Pause()
+        {
+            $currentPlay = $this->requestCurrentPlay();
+            if ($this->isPlaybackActive($currentPlay)) {
+                $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/pause');
+                $this->SetValue('Action', self::PAUSE);
+            }
+        }
+
+        public function PreviousTrack()
+        {
+            $currentPlay = $this->requestCurrentPlay();
+            if ($this->isPlaybackActive($currentPlay)) {
+                $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/previous');
+            }
+        }
+
+        public function NextTrack()
+        {
+            $currentPlay = $this->requestCurrentPlay();
+            if ($this->isPlaybackActive($currentPlay)) {
+                $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/next');
+            }
+        }
+
+        public function PlayURI(string $URI)
+        {
+            // Special handling for tracks
+            $body = [];
+            // It seems like URI for tracks seem to start with "spotify:track", so we'll start with that
+            // If needed, we could check for track existence or something
+            if (substr($URI, 0, strlen('spotify:track')) == 'spotify:track') {
+                $body['uris'] = [$URI];
+            } else {
+                $body['context_uri'] = $URI;
+            }
+
+            $deviceID = $this->getCurrentDeviceID();
+            $url = 'https://api.spotify.com/v1/me/player/play';
+            if ($deviceID) {
+                $url .= '?device_id=' . $deviceID;
+            }
+
+            $this->MakeRequest('PUT', $url, json_encode($body));
+            $this->SetValue('Action', self::PLAY);
+        }
+
+        public function Search(string $SearchQuery, bool $SearchAlbums, bool $SearchArtists, bool $SearchPlaylists, bool $SearchTracks)
+        {
+            $types = [];
+            if ($SearchAlbums) {
+                $types[] = 'album';
+            }
+            if ($SearchArtists) {
+                $types[] = 'artist';
+            }
+            if ($SearchPlaylists) {
+                $types[] = 'playlist';
+            }
+            if ($SearchTracks) {
+                $types[] = 'track';
+            }
+
+            if (count($types) == 0) {
+                throw new Exception($this->Translate('No types selected'));
+            }
+            $results = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/search?q=' . urlencode($SearchQuery) . '&type=' . implode(',', $types)), true);
+
+            $resultList = [];
+
+            if (isset($results['albums']['items'])) {
+                foreach ($results['albums']['items'] as $album) {
+                    $artists = [];
+                    foreach ($album['artists'] as $artist) {
+                        $artists[] = $artist['name'];
+                    }
+
+                    $resultList[] = [
+                        'type'          => $this->Translate('Album'),
+                        'artist'        => implode(', ', $artists),
+                        'albumPlaylist' => $album['name'],
+                        'track'         => '-',
+                        'uri'           => $album['uri']
+                    ];
+                }
+            }
+
+            if (isset($results['artists']['items'])) {
+                foreach ($results['artists']['items'] as $artist) {
+                    $resultList[] = [
+                        'type'          => $this->Translate('Artist'),
+                        'artist'        => $artist['name'],
+                        'albumPlaylist' => '-',
+                        'track'         => '-',
+                        'uri'           => $artist['uri']
+                    ];
+                }
+            }
+
+            if (isset($results['playlists']['items'])) {
+                foreach ($results['playlists']['items'] as $playlist) {
+                    $resultList[] = [
+                        'type'          => $this->Translate('Playlist'),
+                        'artist'        => $playlist['owner']['display_name'],
+                        'albumPlaylist' => $playlist['name'],
+                        'track'         => '-',
+                        'uri'           => $playlist['uri']
+                    ];
+                }
+            }
+
+            if (isset($results['tracks']['items'])) {
+                foreach ($results['tracks']['items'] as $track) {
+                    $artists = [];
+                    foreach ($track['artists'] as $artist) {
+                        $artists[] = $artist['name'];
+                    }
+
+                    $resultList[] = [
+                        'type'          => $this->Translate('Track'),
+                        'artist'        => implode(', ', $artists),
+                        'albumPlaylist' => $track['album']['name'],
+                        'track'         => $track['name'],
+                        'uri'           => $track['uri']
+                    ];
+                }
+            }
+
+            $this->UpdateFormField('SearchResults', 'values', json_encode($resultList));
+            $this->UpdateFormField('SearchResults', 'rowCount', 20);
+        }
+
+        public function AddSearchResultToFavorites($SearchResult)
+        {
+            if ($SearchResult['add']) {
+                unset($SearchResult['add']);
+                // Revert translation of type, so we save the original text
+                switch ($SearchResult['type']) {
+                    case $this->Translate('Album'):
+                        $SearchResult['type'] = 'Album';
+                        break;
+
+                    case $this->Translate('Playlist'):
+                        $SearchResult['type'] = 'Playlist';
+                        break;
+
+                    case $this->Translate('Artist'):
+                        $SearchResult['type'] = 'Artist';
+                        break;
+
+                    case $this->Translate('Track'):
+                        $SearchResult['type'] = 'Track';
+                        break;
+                }
+                $this->AddToFavorites($SearchResult);
+            } else {
+                $this->RemoveFavorite($SearchResult['uri']);
+            }
+        }
+
+        public function AddPlaylistToFavorites($Playlist)
+        {
+            if ($Playlist['add']) {
+                $newFavorite = [
+                    'type'          => $this->Translate('Playlist'),
+                    'artist'        => $Playlist['owner'],
+                    'albumPlaylist' => $Playlist['playlist'],
+                    'track'         => '-',
+                    'uri'           => $Playlist['uri']
+                ];
+                $this->AddToFavorites($newFavorite);
+            } else {
+                $this->RemoveFavorite($Playlist['uri']);
+            }
+        }
+
+        public function RemoveFavorite(string $FavoriteURI)
+        {
             $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
-            return (sizeof(array_filter($favorites, function($favorite) use ($URI) {
+            foreach ($favorites as $index => $favorite) {
+                if ($favorite['uri'] == $FavoriteURI) {
+                    array_splice($favorites, $index, 1);
+                    $this->WriteAttributeString('Favorites', json_encode($favorites));
+                    $this->UpdateFormField('Favorites', 'values', json_encode($this->GetTranslatedFavorites()));
+                    $this->UpdateFavoritesProfile();
+                    break;
+                }
+            }
+        }
+
+        public function SetRepeat(int $Repeat)
+        {
+            $url = 'https://api.spotify.com/v1/me/player/repeat?state=';
+            switch ($Repeat) {
+                case self::REPEAT_OFF:
+                    $url .= 'off';
+                    break;
+
+                case self::REPEAT_CONTEXT:
+                    $url .= 'context';
+                    break;
+
+                case self::REPEAT_TRACK:
+                    $url .= 'track';
+                    break;
+
+            }
+
+            $this->MakeRequest('PUT', $url);
+            $this->SetValue('Repeat', $Repeat);
+        }
+
+        public function SetShuffle(bool $Shuffle)
+        {
+            $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/shuffle?state=' . json_encode($Shuffle));
+            $this->SetValue('Shuffle', $Shuffle);
+        }
+
+        public function UpdateVariables()
+        {
+            // The following updates won't work or make no sense if there is no token yet
+            if ($this->ReadAttributeString('Token') != '') {
+                $this->UpdateFavoritesProfile();
+                $this->UpdateDevices();
+
+                $currentPlay = $this->requestCurrentPlay();
+                if ($this->isPlaybackActive($currentPlay)) {
+                    $this->SetValue('Action', self::PLAY);
+                    switch ($currentPlay['repeat_state']) {
+                        case 'off':
+                            $this->SetValue('Repeat', self::REPEAT_OFF);
+                            break;
+
+                        case 'track':
+                            $this->SetValue('Repeat', self::REPEAT_TRACK);
+                            break;
+
+                        case 'context':
+                            $this->SetValue('Repeat', self::REPEAT_CONTEXT);
+                            break;
+                    }
+
+                    $this->SetValue('Shuffle', $currentPlay['shuffle_state']);
+                } else {
+                    $this->SetValue('Action', self::PAUSE);
+                    $this->SetValue('Repeat', self::REPEAT_OFF);
+                    $this->SetValue('Shuffle', false);
+                }
+            } else {
+                $this->SetValue('Action', self::PAUSE);
+                $this->SetValue('Repeat', self::REPEAT_OFF);
+                $this->SetValue('Shuffle', false);
+            }
+        }
+
+        public function ResetToken()
+        {
+            $this->WriteAttributeString('Token', '');
+        }
+
+        /**
+         * This function will be called by the OAuth control. Visibility should be protected!
+         */
+        protected function ProcessOAuthData()
+        {
+
+            //Lets assume requests via GET are for code exchange. This might not fit your needs!
+            if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+                if (!isset($_GET['code'])) {
+                    die('Authorization Code expected');
+                }
+
+                $token = $this->FetchRefreshToken($_GET['code']);
+
+                $this->SendDebug('ProcessOAuthData', "OK! Let's save the Refresh Token permanently", 0);
+
+                $this->WriteAttributeString('Token', $token);
+
+                $this->ReloadForm();
+            } else {
+
+                //Just print raw post data!
+                echo file_get_contents('php://input');
+            }
+        }
+
+        private function isFavorite($URI)
+        {
+            $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
+            return count(array_filter($favorites, function ($favorite) use ($URI)
+            {
                 return $favorite['uri'] === $URI;
-            })) > 0);
+            })) > 0;
         }
 
         private function getCurrentDeviceID()
@@ -235,16 +544,6 @@ declare(strict_types=1);
             }
         }
 
-        /**
-         * This function will be called by the register button on the property page!
-         */
-        public function Register()
-        {
-
-            //Return everything which will open the browser
-            return 'https://oauth.ipmagic.de/authorize/' . $this->oauthIdentifer . '?username=' . urlencode(IPS_GetLicensee());
-        }
-
         private function FetchRefreshToken($code)
         {
             $this->SendDebug('FetchRefreshToken', 'Use Authentication Code to get our precious Refresh Token!', 0);
@@ -271,32 +570,6 @@ declare(strict_types=1);
 
             //Return RefreshToken
             return $data->refresh_token;
-        }
-
-        /**
-         * This function will be called by the OAuth control. Visibility should be protected!
-         */
-        protected function ProcessOAuthData()
-        {
-
-            //Lets assume requests via GET are for code exchange. This might not fit your needs!
-            if ($_SERVER['REQUEST_METHOD'] == 'GET') {
-                if (!isset($_GET['code'])) {
-                    die('Authorization Code expected');
-                }
-
-                $token = $this->FetchRefreshToken($_GET['code']);
-
-                $this->SendDebug('ProcessOAuthData', "OK! Let's save the Refresh Token permanently", 0);
-
-                $this->WriteAttributeString('Token', $token);
-
-                $this->ReloadForm();
-            } else {
-
-                //Just print raw post data!
-                echo file_get_contents('php://input');
-            }
         }
 
         private function FetchAccessToken($Token = '', $Expires = 0)
@@ -447,151 +720,8 @@ declare(strict_types=1);
             $this->EnableAction('Device');
         }
 
-        public function Play()
+        private function GetTranslatedFavorites()
         {
-            $currentPlay = $this->requestCurrentPlay();
-            if ($currentPlay) {
-                $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/play');
-                $this->SetValue('Action', self::PLAY);
-            }
-            else {
-                RequestAction($this->GetIDForIdent('Favorite'), $this->GetValue('Favorite'));
-            }
-        }
-
-        public function Pause()
-        {
-            $currentPlay = $this->requestCurrentPlay();
-            if ($this->isPlaybackActive($currentPlay)) {
-                $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/pause');
-                $this->SetValue('Action', self::PAUSE);
-            }
-        }
-
-        public function PreviousTrack()
-        {
-            $currentPlay = $this->requestCurrentPlay();
-            if ($this->isPlaybackActive($currentPlay)) {
-                $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/previous');
-            }
-        }
-
-        public function NextTrack()
-        {
-            $currentPlay = $this->requestCurrentPlay();
-            if ($this->isPlaybackActive($currentPlay)) {
-                $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/next');
-            }
-        }
-
-        public function PlayURI(string $URI)
-        {
-            // Special handling for tracks
-            $body = [];
-            // It seems like URI for tracks seem to start with "spotify:track", so we'll start with that
-            // If needed, we could check for track existence or something
-            if (substr($URI, 0, strlen('spotify:track')) == 'spotify:track') {
-                $body['uris'] = [$URI];
-            } else {
-                $body['context_uri'] = $URI;
-            }
-
-            $deviceID = $this->getCurrentDeviceID();
-            $url = 'https://api.spotify.com/v1/me/player/play';
-            if ($deviceID) {
-                $url .= '?device_id=' . $deviceID;
-            }
-
-            $this->MakeRequest('PUT', $url, json_encode($body));
-            $this->SetValue('Action', self::PLAY);
-        }
-
-        public function Search(string $SearchQuery, bool $SearchAlbums, bool $SearchArtists, bool $SearchPlaylists, bool $SearchTracks)
-        {
-            $types = [];
-            if ($SearchAlbums) {
-                $types[] = 'album';
-            }
-            if ($SearchArtists) {
-                $types[] = 'artist';
-            }
-            if ($SearchPlaylists) {
-                $types[] = 'playlist';
-            }
-            if ($SearchTracks) {
-                $types[] = 'track';
-            }
-
-            if (count($types) == 0) {
-                throw new Exception($this->Translate('No types selected'));
-            }
-            $results = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/search?q=' . urlencode($SearchQuery) . '&type=' . implode(',', $types)), true);
-
-            $resultList = [];
-
-            if (isset($results['albums']['items'])) {
-                foreach ($results['albums']['items'] as $album) {
-                    $artists = [];
-                    foreach ($album['artists'] as $artist) {
-                        $artists[] = $artist['name'];
-                    }
-
-                    $resultList[] = [
-                        'type'          => $this->Translate('Album'),
-                        'artist'        => implode(', ', $artists),
-                        'albumPlaylist' => $album['name'],
-                        'track'         => '-',
-                        'uri'           => $album['uri']
-                    ];
-                }
-            }
-
-            if (isset($results['artists']['items'])) {
-                foreach ($results['artists']['items'] as $artist) {
-                    $resultList[] = [
-                        'type'          => $this->Translate('Artist'),
-                        'artist'        => $artist['name'],
-                        'albumPlaylist' => '-',
-                        'track'         => '-',
-                        'uri'           => $artist['uri']
-                    ];
-                }
-            }
-
-            if (isset($results['playlists']['items'])) {
-                foreach ($results['playlists']['items'] as $playlist) {
-                    $resultList[] = [
-                        'type'          => $this->Translate('Playlist'),
-                        'artist'        => $playlist['owner']['display_name'],
-                        'albumPlaylist' => $playlist['name'],
-                        'track'         => '-',
-                        'uri'           => $playlist['uri']
-                    ];
-                }
-            }
-
-            if (isset($results['tracks']['items'])) {
-                foreach ($results['tracks']['items'] as $track) {
-                    $artists = [];
-                    foreach ($track['artists'] as $artist) {
-                        $artists[] = $artist['name'];
-                    }
-
-                    $resultList[] = [
-                        'type'          => $this->Translate('Track'),
-                        'artist'        => implode(', ', $artists),
-                        'albumPlaylist' => $track['album']['name'],
-                        'track'         => $track['name'],
-                        'uri'           => $track['uri']
-                    ];
-                }
-            }
-
-            $this->UpdateFormField('SearchResults', 'values', json_encode($resultList));
-            $this->UpdateFormField('SearchResults', 'rowCount', 20);
-        }
-
-        private function GetTranslatedFavorites() {
             $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
             foreach ($favorites as $favorite) {
                 $favorite['type'] = $this->Translate($favorite['type']);
@@ -608,134 +738,5 @@ declare(strict_types=1);
                 $this->UpdateFormField('Favorites', 'values', json_encode($this->GetTranslatedFavorites()));
                 $this->UpdateFavoritesProfile();
             }
-        }
-
-        public function AddSearchResultToFavorites($SearchResult) {
-            if ($SearchResult['add']) {
-                unset($SearchResult['add']);
-                // Revert translation of type, so we save the original text
-                switch ($SearchResult['type']) {
-                    case $this->Translate('Album'):
-                        $SearchResult['type'] = 'Album';
-                        break;
-                        
-                    case $this->Translate('Playlist'):
-                        $SearchResult['type'] = 'Playlist';
-                        break;
-                    
-                    case $this->Translate('Artist'):
-                        $SearchResult['type'] = 'Artist';
-                        break;
-                        
-                    case $this->Translate('Track'):
-                        $SearchResult['type'] = 'Track';
-                        break;
-                }
-                $this->AddToFavorites($SearchResult);
-            }
-            else {
-                $this->RemoveFavorite($SearchResult['uri']);
-            }
-        }
-
-        public function AddPlaylistToFavorites($Playlist)
-        {
-            if ($Playlist['add']) {
-                $newFavorite = [
-                    'type'          => $this->Translate('Playlist'),
-                    'artist'        => $Playlist['owner'],
-                    'albumPlaylist' => $Playlist['playlist'],
-                    'track'         => '-',
-                    'uri'           => $Playlist['uri']
-                ];
-                $this->AddToFavorites($newFavorite);
-            }
-            else {
-                $this->RemoveFavorite($Playlist['uri']);
-            }
-        }
-
-        public function RemoveFavorite(string $FavoriteURI)
-        {
-            $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
-            foreach ($favorites as $index => $favorite) {
-                if ($favorite['uri'] == $FavoriteURI) {
-                    array_splice($favorites, $index, 1);
-                    $this->WriteAttributeString('Favorites', json_encode($favorites));
-                    $this->UpdateFormField('Favorites', 'values', json_encode($this->GetTranslatedFavorites()));
-                    $this->UpdateFavoritesProfile();
-                    break;
-                }
-            }
-        }
-
-        public function SetRepeat(int $Repeat)
-        {
-            $url = 'https://api.spotify.com/v1/me/player/repeat?state=';
-            switch ($Repeat) {
-                case self::REPEAT_OFF:
-                    $url .= 'off';
-                    break;
-
-                case self::REPEAT_CONTEXT:
-                    $url .= 'context';
-                    break;
-
-                case self::REPEAT_TRACK:
-                    $url .= 'track';
-                    break;
-
-            }
-
-            $this->MakeRequest('PUT', $url);
-            $this->SetValue('Repeat', $Repeat);
-        }
-
-        public function SetShuffle(bool $Shuffle)
-        {
-            $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/shuffle?state=' . json_encode($Shuffle));
-            $this->SetValue('Shuffle', $Shuffle);
-        }
-
-        public function UpdateVariables()
-        {
-            // The following updates won't work or make no sense if there is no token yet
-            if ($this->ReadAttributeString('Token') != '') {
-                $this->UpdateFavoritesProfile();
-                $this->UpdateDevices();
-
-                $currentPlay = $this->requestCurrentPlay();
-                if ($this->isPlaybackActive($currentPlay)) {
-                    $this->SetValue('Action', self::PLAY);
-                    switch ($currentPlay['repeat_state']) {
-                        case 'off':
-                            $this->SetValue('Repeat', self::REPEAT_OFF);
-                            break;
-
-                        case 'track':
-                            $this->SetValue('Repeat', self::REPEAT_TRACK);
-                            break;
-
-                        case 'context':
-                            $this->SetValue('Repeat', self::REPEAT_CONTEXT);
-                            break;
-                    }
-
-                    $this->SetValue('Shuffle', $currentPlay['shuffle_state']);
-                } else {
-                    $this->SetValue('Action', self::PAUSE);
-                    $this->SetValue('Repeat', self::REPEAT_OFF);
-                    $this->SetValue('Shuffle', false);
-                }
-            } else {
-                $this->SetValue('Action', self::PAUSE);
-                $this->SetValue('Repeat', self::REPEAT_OFF);
-                $this->SetValue('Shuffle', false);
-            }
-        }
-
-        public function ResetToken()
-        {
-            $this->WriteAttributeString('Token', '');
         }
     }
