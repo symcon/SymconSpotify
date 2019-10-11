@@ -102,7 +102,7 @@ declare(strict_types=1);
                     if (isset($form[$area])) {
                         foreach ($form[$area] as $index => $field) {
                             if (isset($field['name']) && ($field['name'] == 'Favorites')) {
-                                $form[$area][$index]['values'] = json_decode($this->ReadAttributeString('Favorites'), true);
+                                $form[$area][$index]['values'] = $this->GetTranslatedFavorites();
                             } elseif (isset($field['name']) && ($field['name'] == 'UserPlaylists')) {
 
                                 // TODO: Try block as a user could not be registered properly. In that case, we want to give some meaningful feedback
@@ -398,20 +398,20 @@ declare(strict_types=1);
                 // Get proper name, depending on type
                 $name = '';
                 switch ($favorite['type']) {
-                    case $this->Translate('Album'):
-                    case $this->Translate('Playlist'):
+                    case 'Album':
+                    case 'Playlist':
                         $name = $favorite['albumPlaylist'];
                         break;
 
-                    case $this->Translate('Artist'):
+                    case 'Artist':
                         $name = $favorite['artist'];
                         break;
 
-                    case $this->Translate('Track'):
+                    case 'Track':
                         $name = $favorite['track'];
                         break;
                 }
-                IPS_SetVariableProfileAssociation($profileName, $index, $favorite['type'] . ': ' . $name, '', -1);
+                IPS_SetVariableProfileAssociation($profileName, $index, $this->Translate($favorite['type']) . ': ' . $name, '', -1);
             }
         }
 
@@ -588,13 +588,21 @@ declare(strict_types=1);
             $this->UpdateFormField('SearchResults', 'rowCount', 20);
         }
 
+        private function GetTranslatedFavorites() {
+            $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
+            foreach ($favorites as $favorite) {
+                $favorite['type'] = $this->Translate($favorite['type']);
+            }
+            return $favorites;
+        }
+
         private function AddToFavorites($Favorite)
         {
             if (!$this->isFavorite($Favorite['uri'])) {
                 $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
                 $favorites[] = $Favorite;
                 $this->WriteAttributeString('Favorites', json_encode($favorites));
-                $this->UpdateFormField('Favorites', 'values', json_encode($favorites));
+                $this->UpdateFormField('Favorites', 'values', json_encode($this->GetTranslatedFavorites()));
                 $this->UpdateFavoritesProfile();
             }
         }
@@ -602,6 +610,24 @@ declare(strict_types=1);
         public function AddSearchResultToFavorites($SearchResult) {
             if ($SearchResult['add']) {
                 unset($SearchResult['add']);
+                // Revert translation of type, so we save the original text
+                switch ($SearchResult['type']) {
+                    case $this->Translate('Album'):
+                        $SearchResult['type'] = 'Album';
+                        break;
+                        
+                    case $this->Translate('Playlist'):
+                        $SearchResult['type'] = 'Playlist';
+                        break;
+                    
+                    case $this->Translate('Artist'):
+                        $SearchResult['type'] = 'Artist';
+                        break;
+                        
+                    case $this->Translate('Track'):
+                        $SearchResult['type'] = 'Track';
+                        break;
+                }
                 $this->AddToFavorites($SearchResult);
             }
             else {
@@ -633,7 +659,7 @@ declare(strict_types=1);
                 if ($favorite['uri'] == $FavoriteURI) {
                     array_splice($favorites, $index, 1);
                     $this->WriteAttributeString('Favorites', json_encode($favorites));
-                    $this->UpdateFormField('Favorites', 'values', json_encode($favorites));
+                    $this->UpdateFormField('Favorites', 'values', json_encode($this->GetTranslatedFavorites()));
                     $this->UpdateFavoritesProfile();
                     break;
                 }
