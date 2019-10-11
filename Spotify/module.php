@@ -12,7 +12,7 @@ declare(strict_types=1);
         const REPEAT_OFF = 0;
         const REPEAT_CONTEXT = 1;
         const REPEAT_TRACK = 2;
-        
+
         //This one needs to be available on our OAuth client backend.
         //Please contact us to register for an identifier: https://www.symcon.de/kontakt/#OAuth
         private $oauthIdentifer = 'spotify';
