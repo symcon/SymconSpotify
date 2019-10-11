@@ -66,6 +66,7 @@
 			"name": "SearchResults",
 			"caption": "Search Results",
 			"rowCount": 1,
+			"onEdit": "SPO_AddSearchResultToFavorites($id, $SearchResults);",
 			"columns": [
 				{
 					"name": "type",
@@ -89,22 +90,27 @@
 				},
 				{
 					"name": "uri",
-					"caption": "URI",
+					"caption": "",
 					"width": "0px",
 					"visible": false
+				},
+				{
+					"name": "add",
+					"caption": "Favorite",
+					"width": "70px",
+					"align": "center",
+					"edit": {
+						"type": "CheckBox"
+					}
 				}
 			]
-		},
-		{
-			"type": "Button",
-			"caption": "Add to Favorites",
-			"onClick": "SPO_AddToFavorites($id, $SearchResults);"
 		},
 		{
 			"type": "List",
 			"name": "UserPlaylists",
 			"caption": "Your Playlists",
 			"rowCount": 5,
+			"onEdit": "SPO_AddPlaylistToFavorites($id, $UserPlaylists);",
 			"columns": [
 				{
 					"name": "playlist",
@@ -118,22 +124,24 @@
 				},
 				{
 					"name": "uri",
-					"caption": "URI",
+					"caption": "",
 					"width": "0px",
 					"visible": false
 				},
 				{
 					"name": "owner",
-					"caption": "Owner",
+					"caption": "",
 					"width": "0px",
 					"visible": false
 				},
 				{
 					"name": "add",
-					"caption": "",
-					"width": "30px",
-					"onClick": "SPO_AddPlaylistToFavorites($id, $UserPlaylists);",
-					"add": "★"
+					"caption": "Favorite",
+					"width": "70px",
+					"align": "center",
+					"edit": {
+						"type": "CheckBox"
+					}
 				}
 			]
 		},
@@ -174,7 +182,7 @@
 					"caption": "",
 					"width": "30px",
 					"onClick": "SPO_RemoveFavorite($id, $Favorites['uri']);",
-					"add": "🗑"
+					"add": "🗑️"
 				}
 			]
 		}

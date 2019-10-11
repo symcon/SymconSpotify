@@ -102,20 +102,21 @@ declare(strict_types=1);
                     if (isset($form[$area])) {
                         foreach ($form[$area] as $index => $field) {
                             if (isset($field['name']) && ($field['name'] == 'Favorites')) {
-                                $form[$area][$index]['values'] = json_decode($this->ReadAttributeString('Favorites'));
+                                $form[$area][$index]['values'] = json_decode($this->ReadAttributeString('Favorites'), true);
                             } elseif (isset($field['name']) && ($field['name'] == 'UserPlaylists')) {
-                                $this->SendDebug('Enter', 'If Block', 0);
 
                                 // TODO: Try block as a user could not be registered properly. In that case, we want to give some meaningful feedback
                                 try {
                                     $playlists = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/playlists'), true);
+                                    $this->SendDebug('Playlists', json_encode($playlists), 0);
                                     $userPlaylists = [];
                                     foreach ($playlists['items'] as $playlist) {
                                         $userPlaylists[] = [
                                             'playlist' => $playlist['name'],
                                             'tracks'   => strval($playlist['tracks']['total']),
                                             'owner'    => $playlist['owner']['display_name'],
-                                            'uri'      => $playlist['uri']
+                                            'uri'      => $playlist['uri'],
+                                            'add'      => $this->isFavorite($playlist['uri'])
                                         ];
                                     }
                                     $form[$area][$index]['values'] = $userPlaylists;
@@ -179,6 +180,13 @@ declare(strict_types=1);
                     break;
 
             }
+        }
+
+        private function isFavorite($URI) {
+            $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
+            return (sizeof(array_filter($favorites, function($favorite) use ($URI) {
+                return $favorite['uri'] === $URI;
+            })) > 0);
         }
 
         private function getCurrentDeviceID()
@@ -579,26 +587,42 @@ declare(strict_types=1);
             $this->UpdateFormField('SearchResults', 'rowCount', 20);
         }
 
-        public function AddToFavorites($Favorite)
+        private function AddToFavorites($Favorite)
         {
-            $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
-            // TODO: Check if already in favorites before adding a new one
-            $favorites[] = $Favorite;
-            $this->WriteAttributeString('Favorites', json_encode($favorites));
-            $this->UpdateFormField('Favorites', 'values', json_encode($favorites));
-            $this->UpdateFavoritesProfile();
+            if (!$this->isFavorite($Favorite['uri'])) {
+                $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
+                $favorites[] = $Favorite;
+                $this->WriteAttributeString('Favorites', json_encode($favorites));
+                $this->UpdateFormField('Favorites', 'values', json_encode($favorites));
+                $this->UpdateFavoritesProfile();
+            }
+        }
+
+        public function AddSearchResultToFavorites($SearchResult) {
+            if ($SearchResult['add']) {
+                unset($SearchResult['add']);
+                $this->AddToFavorites($SearchResult);
+            }
+            else {
+                $this->RemoveFavorite($SearchResult['uri']);
+            }
         }
 
         public function AddPlaylistToFavorites($Playlist)
         {
-            $newFavorite = [
-                'type'          => $this->Translate('Playlist'),
-                'artist'        => $Playlist['owner'],
-                'albumPlaylist' => $Playlist['playlist'],
-                'track'         => '-',
-                'uri'           => $Playlist['uri']
-            ];
-            $this->AddToFavorites($newFavorite);
+            if ($Playlist['add']) {
+                $newFavorite = [
+                    'type'          => $this->Translate('Playlist'),
+                    'artist'        => $Playlist['owner'],
+                    'albumPlaylist' => $Playlist['playlist'],
+                    'track'         => '-',
+                    'uri'           => $Playlist['uri']
+                ];
+                $this->AddToFavorites($newFavorite);
+            }
+            else {
+                $this->RemoveFavorite($Playlist['uri']);
+            }
         }
 
         public function RemoveFavorite(string $FavoriteURI)

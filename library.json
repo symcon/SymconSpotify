@@ -5,5 +5,8 @@
 	"url": "https://www.symcon.de/",
 	"version": "1.0",
 	"build": 0,
-	"date": 0
+	"date": 0,
+	"compatibility": {
+		"version": "5.3"
+	}
 }
