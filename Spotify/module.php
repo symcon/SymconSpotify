@@ -438,24 +438,38 @@ declare(strict_types=1);
 
         public function Play()
         {
-            $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/play');
+            $deviceID = $this->getCurrentDeviceID();
+            $url = 'https://api.spotify.com/v1/me/player/play';
+            if ($deviceID) {
+                $url .= '?device_id=' . $deviceID;
+            }
+            $this->MakeRequest('PUT', $url);
             $this->SetValue('Action', self::PLAY);
         }
 
         public function Pause()
         {
-            $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/pause');
-            $this->SetValue('Action', self::PAUSE);
+            $currentPlay = $this->requestCurrentPlay();
+            if ($this->isPlaybackActive($currentPlay)) {
+                $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/pause');
+                $this->SetValue('Action', self::PAUSE);
+            }
         }
 
         public function PreviousTrack()
         {
-            $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/previous');
+            $currentPlay = $this->requestCurrentPlay();
+            if ($this->isPlaybackActive($currentPlay)) {
+                $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/previous');
+            }
         }
 
         public function NextTrack()
         {
-            $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/next');
+            $currentPlay = $this->requestCurrentPlay();
+            if ($this->isPlaybackActive($currentPlay)) {
+                $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/next');
+            }
         }
 
         public function PlayURI(string $URI)
