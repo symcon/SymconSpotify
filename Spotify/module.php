@@ -424,7 +424,8 @@ declare(strict_types=1);
 
         public function UpdateVariables()
         {
-            $resetCurrentPlaying = function (bool $resetCommands = false) {
+            $resetCurrentPlaying = function (bool $resetCommands = false)
+            {
                 $this->SendDebug('Reset', 'Current Playing', 0);
                 $this->SetValue('CurrentTrack', self::PLACEHOLDER_NONE);
                 $this->SetValue('CurrentArtist', self::PLACEHOLDER_NONE);
@@ -544,7 +545,8 @@ declare(strict_types=1);
         private function isFavorite($URI)
         {
             $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
-            return count(array_filter($favorites, function ($favorite) use ($URI) {
+            return count(array_filter($favorites, function ($favorite) use ($URI)
+            {
                 return $favorite['uri'] === $URI;
             })) > 0;
         }
