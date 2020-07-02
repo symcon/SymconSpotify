@@ -28,7 +28,11 @@
             "Off": "Aus",
             "Context": "Kontext",
             "Repeat": "Wiederholen",
-            "Shuffle": "Zufällige Wiedergabe"
+            "Shuffle": "Zufällige Wiedergabe",
+            "Current Track": "Aktueller Song",
+            "Current Artist": "Aktueller Künstler",
+            "Current Album": "Aktuelles Album",
+            "Current Cover": "Aktuelles Cover"
         }
     }
 }
