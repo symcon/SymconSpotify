@@ -137,6 +137,7 @@ declare(strict_types=1);
                     $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
                     $this->PlayURI($favorites[$Value]['uri']);
                     $this->SetValue($Ident, $Value);
+                    $this->UpdateVariables();
                     break;
 
                 case 'Device':
@@ -167,8 +168,8 @@ declare(strict_types=1);
                         case self::PREVIOUS:
                             $this->PreviousTrack();
                             break;
-
                     }
+                    $this->UpdateVariables();
                     break;
 
                 case 'Repeat':
