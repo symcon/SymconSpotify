@@ -67,7 +67,7 @@ declare(strict_types=1);
             $this->RegisterVariableString('CurrentTrack', $this->Translate('Current Track'), '', 10);
             $this->RegisterVariableString('CurrentArtist', $this->Translate('Current Artist'), '', 20);
             $this->RegisterVariableString('CurrentAlbum', $this->Translate('Current Album'), '', 30);
-            $this->RegisterVariableString('CurrentImage', $this->Translate('Current Image'), '~HTMLBox', 0);
+            $this->RegisterVariableString('CurrentCover', $this->Translate('Current Cover'), '~HTMLBox', 0);
 
             $this->RegisterTimer('UpdateTimer', 0, 'SPO_UpdateVariables($_IPS["TARGET"]);');
         }
@@ -429,7 +429,7 @@ declare(strict_types=1);
                 $this->SetValue('CurrentTrack', self::PLACEHOLDER_NONE);
                 $this->SetValue('CurrentArtist', self::PLACEHOLDER_NONE);
                 $this->SetValue('CurrentAlbum', self::PLACEHOLDER_NONE);
-                $this->SetValue('CurrentImage', '');
+                $this->SetValue('CurrentCover', '');
                 if ($resetCommands) {
                     $this->SetValue('Action', self::PAUSE);
                     $this->SetValue('Repeat', self::REPEAT_OFF);
@@ -472,10 +472,10 @@ declare(strict_types=1);
                                 $this->SetValue('CurrentAlbum', $currentPlay['item']['album']['name']);
                                 if (isset($currentPlay['item']['album']['images'][0])) {
                                     $imageObject = $currentPlay['item']['album']['images'][0];
-                                    $this->SetValue('CurrentImage', '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">');
+                                    $this->SetValue('CurrentCover', '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">');
                                 }
                                 else {
-                                    $this->SetValue('CurrentImage', '');
+                                    $this->SetValue('CurrentCover', '');
                                 }
                                 break;
 
@@ -489,10 +489,10 @@ declare(strict_types=1);
                                 $this->SetValue('CurrentAlbum', $currentPlay['item']['show']['name']);
                                 if (isset($currentPlay['item']['show']['images'][0])) {
                                     $imageObject = $currentPlay['item']['show']['images'][0];
-                                    $this->SetValue('CurrentImage', '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">');
+                                    $this->SetValue('CurrentCover', '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">');
                                 }
                                 else {
-                                    $this->SetValue('CurrentImage', '');
+                                    $this->SetValue('CurrentCover', '');
                                 }
                                 break;
 
