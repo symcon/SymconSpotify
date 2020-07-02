@@ -25,13 +25,7 @@ declare(strict_types=1);
             $this->RegisterPropertyInteger('UpdateInterval', 60);
 
             $this->RegisterAttributeString('Token', '');
-            $this->RegisterAttributeString('Favorites', json_encode([[
-                'type'          => $this->Translate('Playlist'),
-                'artist'        => 'Niels Thole',
-                'albumPlaylist' => 'Weihnachten mit Dr. Niels',
-                'track'         => '-',
-                'uri'           => 'spotify:playlist:3ZJhSV31LG3Wz2qda8PXbP'
-            ]]));
+            $this->RegisterAttributeString('Favorites', '[]');
             $this->RegisterAttributeString('DeviceIDs', '[]');
 
             $profileNameFavorites = 'Spotify.Favorites.' . $this->InstanceID;
