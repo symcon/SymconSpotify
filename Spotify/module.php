@@ -5,9 +5,10 @@ declare(strict_types=1);
     class Spotify extends IPSModule
     {
         const PREVIOUS = 0;
-        const PLAY = 1;
-        const PAUSE = 2;
-        const NEXT = 3;
+        const STOP = 1;
+        const PLAY = 2;
+        const PAUSE = 3;
+        const NEXT = 4;
 
         const REPEAT_OFF = 0;
         const REPEAT_CONTEXT = 1;
@@ -39,22 +40,13 @@ declare(strict_types=1);
                 IPS_CreateVariableProfile($profileNameDevices, 1);
             }
 
-            $this->RegisterVariableInteger('Favorite', $this->Translate('Favorite'), $profileNameFavorites, 0);
+            $this->RegisterVariableInteger('Favorite', $this->Translate('Favorite'), $profileNameFavorites, 50);
             $this->EnableAction('Favorite');
 
-            $this->RegisterVariableInteger('Device', $this->Translate('Device'), $profileNameDevices, 0);
+            $this->RegisterVariableInteger('Device', $this->Translate('Device'), $profileNameDevices, 50);
             $this->EnableAction('Device');
 
-            $profileNameActions = 'Spotify.Actions';
-            if (!IPS_VariableProfileExists($profileNameActions)) {
-                IPS_CreateVariableProfile($profileNameActions, 1); // Integer
-                IPS_SetVariableProfileAssociation($profileNameActions, self::PREVIOUS, '⏮', '', -1);
-                IPS_SetVariableProfileAssociation($profileNameActions, self::PLAY, 'Play', '', -1);
-                IPS_SetVariableProfileAssociation($profileNameActions, self::PAUSE, 'Pause', '', -1);
-                IPS_SetVariableProfileAssociation($profileNameActions, self::NEXT, '⏭', '', -1);
-            }
-
-            $this->RegisterVariableInteger('Action', $this->Translate('Action'), $profileNameActions, 0);
+            $this->RegisterVariableInteger('Action', $this->Translate('Action'), '~PlaybackPreviousNext', 40);
             $this->EnableAction('Action');
 
             $profileNameRepeat = 'Spotify.Repeat';
@@ -64,10 +56,10 @@ declare(strict_types=1);
                 IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_CONTEXT, $this->Translate('Context'), '', -1);
                 IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_TRACK, $this->Translate('Track'), '', -1);
             }
-            $this->RegisterVariableInteger('Repeat', $this->Translate('Repeat'), $profileNameRepeat, 0);
+            $this->RegisterVariableInteger('Repeat', $this->Translate('Repeat'), $profileNameRepeat, 50);
             $this->EnableAction('Repeat');
 
-            $this->RegisterVariableBoolean('Shuffle', $this->Translate('Shuffle'), '~Switch', 0);
+            $this->RegisterVariableBoolean('Shuffle', $this->Translate('Shuffle'), '~Switch', 50);
             $this->EnableAction('Shuffle');
 
             $this->RegisterTimer('UpdateTimer', 0, 'SPO_UpdateVariables($_IPS["TARGET"]);');
@@ -156,6 +148,7 @@ declare(strict_types=1);
                             $this->Play();
                             break;
 
+                        case self::STOP:
                         case self::PAUSE:
                             $this->Pause();
                             break;
