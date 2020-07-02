@@ -30,7 +30,7 @@ Innerhalb des Moduls werden Favoriten gespeichert, welche dann komfortabel aus d
 
 * Über den Module Store das 'Spotify'-Modul installieren.
 * Alternativ über das Module Control folgende URL hinzufügen:
-`https://github.com/DrNiels/Spotify`  
+`https://github.com/symcon/SymconSpotify`  
 
 ### 4. Einrichten der Instanzen in IP-Symcon
 
