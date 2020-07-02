@@ -14,6 +14,8 @@ declare(strict_types=1);
         const REPEAT_CONTEXT = 1;
         const REPEAT_TRACK = 2;
 
+        const PLACEHOLDER_NONE = '-';
+
         //This one needs to be available on our OAuth client backend.
         //Please contact us to register for an identifier: https://www.symcon.de/kontakt/#OAuth
         private $oauthIdentifer = 'spotify';
@@ -61,6 +63,11 @@ declare(strict_types=1);
 
             $this->RegisterVariableBoolean('Shuffle', $this->Translate('Shuffle'), '~Switch', 50);
             $this->EnableAction('Shuffle');
+
+            $this->RegisterVariableString('CurrentTrack', $this->Translate('Current Track'), '', 10);
+            $this->RegisterVariableString('CurrentArtist', $this->Translate('Current Artist'), '', 20);
+            $this->RegisterVariableString('CurrentAlbum', $this->Translate('Current Album'), '', 30);
+            $this->RegisterVariableString('CurrentImage', $this->Translate('Current Image'), '~HTMLBox', 0);
 
             $this->RegisterTimer('UpdateTimer', 0, 'SPO_UpdateVariables($_IPS["TARGET"]);');
         }
@@ -416,6 +423,18 @@ declare(strict_types=1);
 
         public function UpdateVariables()
         {
+            $resetCurrentPlaying = function(bool $resetCommands = false) {
+                $this->SendDebug('Reset', 'Current Playing', 0);
+                $this->SetValue('CurrentTrack', self::PLACEHOLDER_NONE);
+                $this->SetValue('CurrentArtist', self::PLACEHOLDER_NONE);
+                $this->SetValue('CurrentAlbum', self::PLACEHOLDER_NONE);
+                $this->SetValue('CurrentImage', '');
+                if ($resetCommands) {
+                    $this->SetValue('Action', self::PAUSE);
+                    $this->SetValue('Repeat', self::REPEAT_OFF);
+                    $this->SetValue('Shuffle', false);
+                }
+            };
             // The following updates won't work or make no sense if there is no token yet
             if ($this->ReadAttributeString('Token') != '') {
                 $this->UpdateFavoritesProfile();
@@ -439,15 +458,57 @@ declare(strict_types=1);
                     }
 
                     $this->SetValue('Shuffle', $currentPlay['shuffle_state']);
+
+                    if (isset($currentPlay['item']['type'])) {
+                        switch ($currentPlay['item']['type']) {
+                            case 'track':
+                                $this->SetValue('CurrentTrack', $currentPlay['item']['name']);
+                                $artists = [];
+                                foreach ($currentPlay['item']['artists'] as $artist) {
+                                    $artists[] = $artist['name'];
+                                }
+                                $this->SetValue('CurrentArtist', implode(', ', $artists));
+                                $this->SetValue('CurrentAlbum', $currentPlay['item']['album']['name']);
+                                if (isset($currentPlay['item']['album']['images'][0])) {
+                                    $imageObject = $currentPlay['item']['album']['images'][0];
+                                    $this->SetValue('CurrentImage', '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">');
+                                }
+                                else {
+                                    $this->SetValue('CurrentImage', '');
+                                }
+                                break;
+
+                            case 'episode':
+                                $this->SetValue('CurrentTrack', $currentPlay['item']['name']);
+                                $artists = [];
+                                foreach ($currentPlay['item']['artists'] as $artist) {
+                                    $artists[] = $artist['name'];
+                                }
+                                $this->SetValue('CurrentArtist', $currentPlay['item']['show']['publisher']);
+                                $this->SetValue('CurrentAlbum', $currentPlay['item']['show']['name']);
+                                if (isset($currentPlay['item']['show']['images'][0])) {
+                                    $imageObject = $currentPlay['item']['show']['images'][0];
+                                    $this->SetValue('CurrentImage', '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">');
+                                }
+                                else {
+                                    $this->SetValue('CurrentImage', '');
+                                }
+                                break;
+
+                            default:
+                                $resetCurrentPlaying();
+                                break;
+
+                        }
+                    }
+                    else {
+                        $resetCurrentPlaying();
+                    }
                 } else {
-                    $this->SetValue('Action', self::PAUSE);
-                    $this->SetValue('Repeat', self::REPEAT_OFF);
-                    $this->SetValue('Shuffle', false);
+                    $resetCurrentPlaying(true);
                 }
             } else {
-                $this->SetValue('Action', self::PAUSE);
-                $this->SetValue('Repeat', self::REPEAT_OFF);
-                $this->SetValue('Shuffle', false);
+                $resetCurrentPlaying(true);
             }
         }
 
