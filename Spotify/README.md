@@ -47,6 +47,8 @@ ___Erweiterte Einstellungen___
 Name                     | Beschreibung
 ------------------------ | ---------------------------------
 Aktualisierungsintervall | In diesem Intervall werden die Werte der Statusvariablen mit der aktuellen Wiedergabe von Spotify abgeglichen. Dies beinhaltet das Gerät, Wiedergabe oder Pause, Zufallswiedergabe und Wiederholung
+Cover: Maximale Breite   | Maximale Breite des dargestellten Covers
+Cover: Maximale Höhe     | Maximale Höhe des dargestellten Covers
 
 ___Suche___
 
