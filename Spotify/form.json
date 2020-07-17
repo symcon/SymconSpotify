@@ -9,6 +9,18 @@
                     "type": "NumberSpinner",
                     "caption": "Update Interval",
                     "suffix": "seconds"
+                },
+                {
+                    "name": "CoverMaxWidth",
+                    "type": "NumberSpinner",
+                    "caption": "Cover: Maximum Width (0 = No Limit)",
+                    "suffix": "px"
+                },
+                {
+                    "name": "CoverMaxHeight",
+                    "type": "NumberSpinner",
+                    "caption": "Cover: Maximum Height (0 = No Limit)",
+                    "suffix": "px"
                 }
             ]
         }

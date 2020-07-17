@@ -26,6 +26,8 @@ declare(strict_types=1);
             parent::Create();
 
             $this->RegisterPropertyInteger('UpdateInterval', 60);
+            $this->RegisterPropertyInteger('CoverMaxWidth', 0);
+            $this->RegisterPropertyInteger('CoverMaxHeight', 0);
 
             $this->RegisterAttributeString('Token', '');
             $this->RegisterAttributeString('Favorites', '[]');
@@ -471,10 +473,21 @@ declare(strict_types=1);
                                 }
                                 $this->SetValue('CurrentArtist', implode(', ', $artists));
                                 $this->SetValue('CurrentAlbum', $currentPlay['item']['album']['name']);
-                                if (isset($currentPlay['item']['album']['images'][0])) {
-                                    $imageObject = $currentPlay['item']['album']['images'][0];
-                                    $this->SetValue('CurrentCover', '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">');
-                                } else {
+                                $coverFound = false;
+                                if (isset($currentPlay['item']['album']['images'])) {
+                                    foreach ($currentPlay['item']['album']['images'] as &$imageObject) {
+                                        if ((($imageObject['height'] <= $this->ReadPropertyInteger('CoverMaxHeight')) || ($this->ReadPropertyInteger('CoverMaxHeight') == 0)) &&
+                                        (($imageObject['width'] <= $this->ReadPropertyInteger('CoverMaxWidth')) ||  ($this->ReadPropertyInteger('CoverMaxWidth') == 0))) {
+                                            $coverFound = true;
+                                            $newValue = '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">';
+                                            if ($this->GetValue('CurrentCover') != $newValue) {
+                                                $this->SetValue('CurrentCover', $newValue);
+                                            }
+                                            break;
+                                        }   
+                                    }
+                                }
+                                if (!$coverFound && ($this->GetValue('CurrentCover')) != '') {
                                     $this->SetValue('CurrentCover', '');
                                 }
                                 break;
