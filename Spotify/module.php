@@ -338,7 +338,7 @@ declare(strict_types=1);
             $this->UpdateFormField('SearchResults', 'rowCount', 20);
         }
 
-        public function AddSearchResultToFavorites(array $SearchResult)
+        public function AddSearchResultToFavorites(object $SearchResult)
         {
             if ($SearchResult['add']) {
                 unset($SearchResult['add']);
@@ -366,7 +366,7 @@ declare(strict_types=1);
             }
         }
 
-        public function AddPlaylistToFavorites(array $Playlist)
+        public function AddPlaylistToFavorites(object $Playlist)
         {
             if ($Playlist['add']) {
                 $newFavorite = [
