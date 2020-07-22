@@ -338,7 +338,7 @@ declare(strict_types=1);
             $this->UpdateFormField('SearchResults', 'rowCount', 20);
         }
 
-        public function AddSearchResultToFavorites(array $SearchResult)
+        public function AddSearchResultToFavorites(object $SearchResult)
         {
             if ($SearchResult['add']) {
                 unset($SearchResult['add']);
@@ -366,7 +366,7 @@ declare(strict_types=1);
             }
         }
 
-        public function AddPlaylistToFavorites(array $Playlist)
+        public function AddPlaylistToFavorites(object $Playlist)
         {
             if ($Playlist['add']) {
                 $newFavorite = [
@@ -477,14 +477,14 @@ declare(strict_types=1);
                                 if (isset($currentPlay['item']['album']['images'])) {
                                     foreach ($currentPlay['item']['album']['images'] as &$imageObject) {
                                         if ((($imageObject['height'] <= $this->ReadPropertyInteger('CoverMaxHeight')) || ($this->ReadPropertyInteger('CoverMaxHeight') == 0)) &&
-                                        (($imageObject['width'] <= $this->ReadPropertyInteger('CoverMaxWidth')) ||  ($this->ReadPropertyInteger('CoverMaxWidth') == 0))) {
+                                        (($imageObject['width'] <= $this->ReadPropertyInteger('CoverMaxWidth')) || ($this->ReadPropertyInteger('CoverMaxWidth') == 0))) {
                                             $coverFound = true;
                                             $newValue = '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" marginwidth="0" marginheight="0" src="' . $imageObject['url'] . '">';
                                             if ($this->GetValue('CurrentCover') != $newValue) {
                                                 $this->SetValue('CurrentCover', $newValue);
                                             }
                                             break;
-                                        }   
+                                        }
                                     }
                                 }
                                 if (!$coverFound && ($this->GetValue('CurrentCover')) != '') {
