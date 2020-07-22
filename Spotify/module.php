@@ -479,7 +479,7 @@ declare(strict_types=1);
                                         if ((($imageObject['height'] <= $this->ReadPropertyInteger('CoverMaxHeight')) || ($this->ReadPropertyInteger('CoverMaxHeight') == 0)) &&
                                         (($imageObject['width'] <= $this->ReadPropertyInteger('CoverMaxWidth')) ||  ($this->ReadPropertyInteger('CoverMaxWidth') == 0))) {
                                             $coverFound = true;
-                                            $newValue = '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">';
+                                            $newValue = '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" marginwidth="0" marginheight="0" src="' . $imageObject['url'] . '">';
                                             if ($this->GetValue('CurrentCover') != $newValue) {
                                                 $this->SetValue('CurrentCover', $newValue);
                                             }
