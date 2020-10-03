@@ -1,190 +1,200 @@
 {
-	"elements":
-	[
-		{
-			"type": "ExpansionPanel",
-			"caption": "Advanced Settings",
-			"items": [
-				{
-					"name": "UpdateInterval",
-					"type": "NumberSpinner",
-					"caption": "Update Interval",
-					"suffix": "seconds"
-				}
-			]
-		}
-	],
-	"actions":
-	[
-		{
-			"type": "Button",
-			"label": "Register",
-			"onClick": "echo SPO_Register($id);"
-		},
-		{
-			"type": "RowLayout",
-			"items": [
-				{
-					"type": "ValidationTextBox",
-					"name": "SearchQuery",
-					"caption": "Search"
-				},
-				{
-					"type": "CheckBox",
-					"name": "SearchAlbums",
-					"caption": "Search for Albums",
-					"value": true
-				},
-				{
-					"type": "CheckBox",
-					"name": "SearchArtists",
-					"caption": "Search for Artists",
-					"value": true
-				},
-				{
-					"type": "CheckBox",
-					"name": "SearchPlaylists",
-					"caption": "Search for Playlists",
-					"value": true
-				},
-				{
-					"type": "CheckBox",
-					"name": "SearchTracks",
-					"caption": "Search for Tracks",
-					"value": true
-				},
-				{
-					"type": "Button",
-					"name": "Search",
-					"caption": "Start Search",
-					"onClick": "SPO_Search($id, $SearchQuery, $SearchAlbums, $SearchArtists, $SearchPlaylists, $SearchTracks);"
-				}
-			]
-		},
-		{
-			"type": "List",
-			"name": "SearchResults",
-			"caption": "Search Results",
-			"rowCount": 1,
-			"onEdit": "SPO_AddSearchResultToFavorites($id, $SearchResults);",
-			"columns": [
-				{
-					"name": "type",
-					"caption": "Type",
-					"width": "140px"
-				},
-				{
-					"name": "artist",
-					"caption": "Artist",
-					"width": "auto"
-				},
-				{
-					"name": "albumPlaylist",
-					"caption": "Album/Playlist",
-					"width": "200px"
-				},
-				{
-					"name": "track",
-					"caption": "Track",
-					"width": "200px"
-				},
-				{
-					"name": "uri",
-					"caption": "",
-					"width": "0px",
-					"visible": false
-				},
-				{
-					"name": "add",
-					"caption": "Favorite",
-					"width": "70px",
-					"align": "center",
-					"edit": {
-						"type": "CheckBox"
-					}
-				}
-			]
-		},
-		{
-			"type": "List",
-			"name": "UserPlaylists",
-			"caption": "Your Playlists",
-			"rowCount": 5,
-			"onEdit": "SPO_AddPlaylistToFavorites($id, $UserPlaylists);",
-			"columns": [
-				{
-					"name": "playlist",
-					"caption": "Playlist",
-					"width": "auto"
-				},
-				{
-					"name": "tracks",
-					"caption": "Tracks",
-					"width": "200px"
-				},
-				{
-					"name": "uri",
-					"caption": "",
-					"width": "0px",
-					"visible": false
-				},
-				{
-					"name": "owner",
-					"caption": "",
-					"width": "0px",
-					"visible": false
-				},
-				{
-					"name": "add",
-					"caption": "Favorite",
-					"width": "70px",
-					"align": "center",
-					"edit": {
-						"type": "CheckBox"
-					}
-				}
-			]
-		},
-		{
-			"type": "List",
-			"name": "Favorites",
-			"caption": "Favorites",
-			"rowCount": 20,
-			"columns": [
-				{
-					"name": "type",
-					"caption": "Type",
-					"width": "140px"
-				},
-				{
-					"name": "artist",
-					"caption": "Artist",
-					"width": "auto"
-				},
-				{
-					"name": "albumPlaylist",
-					"caption": "Album/Playlist",
-					"width": "200px"
-				},
-				{
-					"name": "track",
-					"caption": "Track",
-					"width": "200px"
-				},
-				{
-					"name": "uri",
-					"caption": "URI",
-					"width": "0px",
-					"visible": false
-				},
-				{
-					"name": "delete",
-					"caption": "",
-					"width": "30px",
-					"onClick": "SPO_RemoveFavorite($id, $Favorites['uri']);",
-					"add": "🗑️"
-				}
-			]
-		}
-	]
+    "elements": [
+        {
+            "type": "ExpansionPanel",
+            "caption": "Advanced Settings",
+            "items": [
+                {
+                    "name": "UpdateInterval",
+                    "type": "NumberSpinner",
+                    "caption": "Update Interval",
+                    "suffix": "seconds"
+                },
+                {
+                    "name": "CoverMaxWidth",
+                    "type": "NumberSpinner",
+                    "caption": "Cover: Maximum Width (0 = No Limit)",
+                    "suffix": "px"
+                },
+                {
+                    "name": "CoverMaxHeight",
+                    "type": "NumberSpinner",
+                    "caption": "Cover: Maximum Height (0 = No Limit)",
+                    "suffix": "px"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "label": "Register",
+            "onClick": "echo SPO_Register($id);"
+        },
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "ValidationTextBox",
+                    "name": "SearchQuery",
+                    "caption": "Search"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "SearchAlbums",
+                    "caption": "Search for Albums",
+                    "value": true
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "SearchArtists",
+                    "caption": "Search for Artists",
+                    "value": true
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "SearchPlaylists",
+                    "caption": "Search for Playlists",
+                    "value": true
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "SearchTracks",
+                    "caption": "Search for Tracks",
+                    "value": true
+                },
+                {
+                    "type": "Button",
+                    "name": "Search",
+                    "caption": "Start Search",
+                    "onClick": "SPO_Search_Configform($id, $SearchQuery, $SearchAlbums, $SearchArtists, $SearchPlaylists, $SearchTracks);"
+                }
+            ]
+        },
+        {
+            "type": "List",
+            "name": "SearchResults",
+            "caption": "Search Results",
+            "rowCount": 1,
+            "onEdit": "SPO_AddSearchResultToFavorites($id, $SearchResults);",
+            "columns": [
+                {
+                    "name": "type",
+                    "caption": "Type",
+                    "width": "140px"
+                },
+                {
+                    "name": "artist",
+                    "caption": "Artist",
+                    "width": "auto"
+                },
+                {
+                    "name": "albumPlaylist",
+                    "caption": "Album/Playlist",
+                    "width": "200px"
+                },
+                {
+                    "name": "track",
+                    "caption": "Track",
+                    "width": "200px"
+                },
+                {
+                    "name": "uri",
+                    "caption": "",
+                    "width": "0px",
+                    "visible": false
+                },
+                {
+                    "name": "add",
+                    "caption": "Favorite",
+                    "width": "70px",
+                    "align": "center",
+                    "edit": {
+                        "type": "CheckBox"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "List",
+            "name": "UserPlaylists",
+            "caption": "Your Playlists",
+            "rowCount": 5,
+            "onEdit": "SPO_AddPlaylistToFavorites($id, $UserPlaylists);",
+            "columns": [
+                {
+                    "name": "playlist",
+                    "caption": "Playlist",
+                    "width": "auto"
+                },
+                {
+                    "name": "tracks",
+                    "caption": "Tracks",
+                    "width": "200px"
+                },
+                {
+                    "name": "uri",
+                    "caption": "",
+                    "width": "0px",
+                    "visible": false
+                },
+                {
+                    "name": "owner",
+                    "caption": "",
+                    "width": "0px",
+                    "visible": false
+                },
+                {
+                    "name": "add",
+                    "caption": "Favorite",
+                    "width": "70px",
+                    "align": "center",
+                    "edit": {
+                        "type": "CheckBox"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "List",
+            "name": "Favorites",
+            "caption": "Favorites",
+            "rowCount": 20,
+            "columns": [
+                {
+                    "name": "type",
+                    "caption": "Type",
+                    "width": "140px"
+                },
+                {
+                    "name": "artist",
+                    "caption": "Artist",
+                    "width": "auto"
+                },
+                {
+                    "name": "albumPlaylist",
+                    "caption": "Album/Playlist",
+                    "width": "200px"
+                },
+                {
+                    "name": "track",
+                    "caption": "Track",
+                    "width": "200px"
+                },
+                {
+                    "name": "uri",
+                    "caption": "URI",
+                    "width": "0px",
+                    "visible": false
+                },
+                {
+                    "name": "delete",
+                    "caption": "",
+                    "width": "30px",
+                    "onClick": "SPO_RemoveFavorite($id, $Favorites['uri']);",
+                    "add": "🗑️"
+                }
+            ]
+        }
+    ]
 }

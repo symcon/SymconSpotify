@@ -5,13 +5,16 @@ declare(strict_types=1);
     class Spotify extends IPSModule
     {
         const PREVIOUS = 0;
-        const PLAY = 1;
-        const PAUSE = 2;
-        const NEXT = 3;
+        const STOP = 1;
+        const PLAY = 2;
+        const PAUSE = 3;
+        const NEXT = 4;
 
         const REPEAT_OFF = 0;
         const REPEAT_CONTEXT = 1;
         const REPEAT_TRACK = 2;
+
+        const PLACEHOLDER_NONE = '-';
 
         //This one needs to be available on our OAuth client backend.
         //Please contact us to register for an identifier: https://www.symcon.de/kontakt/#OAuth
@@ -23,15 +26,13 @@ declare(strict_types=1);
             parent::Create();
 
             $this->RegisterPropertyInteger('UpdateInterval', 60);
+            $this->RegisterPropertyInteger('UpdateIntervalPosition', 1);
+
+            $this->RegisterPropertyInteger('CoverMaxWidth', 0);
+            $this->RegisterPropertyInteger('CoverMaxHeight', 0);
 
             $this->RegisterAttributeString('Token', '');
-            $this->RegisterAttributeString('Favorites', json_encode([[
-                'type'          => $this->Translate('Playlist'),
-                'artist'        => 'Niels Thole',
-                'albumPlaylist' => 'Weihnachten mit Dr. Niels',
-                'track'         => '-',
-                'uri'           => 'spotify:playlist:3ZJhSV31LG3Wz2qda8PXbP'
-            ]]));
+            $this->RegisterAttributeString('Favorites', '[]');
             $this->RegisterAttributeString('DeviceIDs', '[]');
 
             $profileNameFavorites = 'Spotify.Favorites.' . $this->InstanceID;
@@ -45,22 +46,13 @@ declare(strict_types=1);
                 IPS_CreateVariableProfile($profileNameDevices, 1);
             }
 
-            $this->RegisterVariableInteger('Favorite', $this->Translate('Favorite'), $profileNameFavorites, 0);
+            $this->RegisterVariableInteger('Favorite', $this->Translate('Favorite'), $profileNameFavorites, 50);
             $this->EnableAction('Favorite');
 
-            $this->RegisterVariableInteger('Device', $this->Translate('Device'), $profileNameDevices, 0);
+            $this->RegisterVariableInteger('Device', $this->Translate('Device'), $profileNameDevices, 50);
             $this->EnableAction('Device');
 
-            $profileNameActions = 'Spotify.Actions';
-            if (!IPS_VariableProfileExists($profileNameActions)) {
-                IPS_CreateVariableProfile($profileNameActions, 1); // Integer
-                IPS_SetVariableProfileAssociation($profileNameActions, self::PREVIOUS, '⏮', '', -1);
-                IPS_SetVariableProfileAssociation($profileNameActions, self::PLAY, 'Play', '', -1);
-                IPS_SetVariableProfileAssociation($profileNameActions, self::PAUSE, 'Pause', '', -1);
-                IPS_SetVariableProfileAssociation($profileNameActions, self::NEXT, '⏭', '', -1);
-            }
-
-            $this->RegisterVariableInteger('Action', $this->Translate('Action'), $profileNameActions, 0);
+            $this->RegisterVariableInteger('Action', $this->Translate('Action'), '~PlaybackPreviousNext', 40);
             $this->EnableAction('Action');
 
             $profileNameRepeat = 'Spotify.Repeat';
@@ -70,13 +62,30 @@ declare(strict_types=1);
                 IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_CONTEXT, $this->Translate('Context'), '', -1);
                 IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_TRACK, $this->Translate('Track'), '', -1);
             }
-            $this->RegisterVariableInteger('Repeat', $this->Translate('Repeat'), $profileNameRepeat, 0);
+            $this->RegisterVariableInteger('Repeat', $this->Translate('Repeat'), $profileNameRepeat, 50);
             $this->EnableAction('Repeat');
 
-            $this->RegisterVariableBoolean('Shuffle', $this->Translate('Shuffle'), '~Switch', 0);
+            $this->RegisterVariableBoolean('Shuffle', $this->Translate('Shuffle'), '~Switch', 50);
             $this->EnableAction('Shuffle');
 
+            $this->RegisterVariableString('CurrentTrack', $this->Translate('Current Track'), '', 10);
+            $this->RegisterVariableString('CurrentArtist', $this->Translate('Current Artist'), '', 20);
+            $this->RegisterVariableString('CurrentAlbum', $this->Translate('Current Album'), '', 30);
+            $this->RegisterVariableString('CurrentCover', $this->Translate('Current Cover'), '~HTMLBox', 0);
+
+            $this->RegisterVariableInteger('Volume', $this->Translate('Volume'), '~Intensity.100', 60);
+            $this->EnableAction('Volume');
+            $this->RegisterVariableInteger('Position', $this->Translate('Position'), '~Intensity.100', 70);
+            $this->EnableAction('Position');
+
+            $this->RegisterVariableString('Current_Position', $this->Translate('Current Position'), '', 80);
+            $this->RegisterVariableString('Remaining_Time', $this->Translate('Remaining Time'), '', 80);
+            $this->RegisterVariableString('Duration', $this->Translate('Duration'), '', 90);
+            $this->RegisterVariableString('Playlist', $this->Translate('Playlist'), '~HTMLBox', 100);
+            $this->RegisterVariableString('Search', $this->Translate('Search'), '~HTMLBox', 110);
+
             $this->RegisterTimer('UpdateTimer', 0, 'SPO_UpdateVariables($_IPS["TARGET"]);');
+            $this->RegisterTimer('UpdateTimerPosition', 0, 'SPO_UpdatePosition($_IPS["TARGET"]);');
         }
 
         public function ApplyChanges()
@@ -93,6 +102,7 @@ declare(strict_types=1);
             $this->UpdateVariables();
 
             $this->SetTimerInterval('UpdateTimer', $this->ReadPropertyInteger('UpdateInterval') * 1000);
+            $this->SetTimerInterval('UpdateTimerPosition', $this->ReadPropertyInteger('UpdateIntervalPosition') * 1000);
         }
 
         public function GetConfigurationForm()
@@ -144,6 +154,7 @@ declare(strict_types=1);
                     $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
                     $this->PlayURI($favorites[$Value]['uri']);
                     $this->SetValue($Ident, $Value);
+                    $this->UpdateVariables();
                     break;
 
                 case 'Device':
@@ -162,6 +173,7 @@ declare(strict_types=1);
                             $this->Play();
                             break;
 
+                        case self::STOP:
                         case self::PAUSE:
                             $this->Pause();
                             break;
@@ -173,8 +185,8 @@ declare(strict_types=1);
                         case self::PREVIOUS:
                             $this->PreviousTrack();
                             break;
-
                     }
+                    $this->UpdateVariables();
                     break;
 
                 case 'Repeat':
@@ -183,6 +195,10 @@ declare(strict_types=1);
 
                 case 'Shuffle':
                     $this->SetShuffle($Value);
+                    break;
+
+                case 'Volume':
+                    $this->SetVolume($Value);
                     break;
 
             }
@@ -196,6 +212,82 @@ declare(strict_types=1);
 
             //Return everything which will open the browser
             return 'https://oauth.ipmagic.de/authorize/' . $this->oauthIdentifer . '?username=' . urlencode(IPS_GetLicensee());
+        }
+
+        /** Get Information About The User's Current Playback
+         *
+         */
+        public function CurrentPlayback()
+        {
+            return $currentPlay = $this->requestCurrentPlay();
+        }
+
+        /** Get the User's Currently Playing Track
+         *
+         */
+        public function CurrentlyPlayingTrack()
+        {
+            return json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/player/currently-playing'), true);
+        }
+
+        /** Get a List of Current User's Playlists
+         *
+         */
+        public function CurrentPlaylist()
+        {
+            return $currentPlaylist = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/playlists'), true);
+        }
+
+        /** Get a Playlist
+         *
+         */
+        public function GetPlaylist(int $playlist_id)
+        {
+            return $currentPlaylist = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/playlists/' . $playlist_id), true);
+        }
+
+        /** Get a Playlist Cover Image
+         *
+         */
+        public function GetPlaylistCoverImage(int $playlist_id)
+        {
+            return $currentPlaylist = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/playlists/' . $playlist_id . '/images'), true);
+        }
+
+        /** Get a Playlist's Items
+         *
+         */
+        public function GetPlaylistsItems(int $playlist_id)
+        {
+            return $currentPlaylist = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/playlists/' . $playlist_id . '/tracks'), true);
+        }
+
+        public function CustomCommand(string $method, string $url)
+        {
+            $currentPlay = $this->requestCurrentPlay();
+            if ($currentPlay) {
+
+                $this->SetValue('Action', self::PLAY);
+            } else {
+                RequestAction($this->GetIDForIdent('Favorite'), $this->GetValue('Favorite'));
+            }
+            return $this->MakeRequest($method, $url);
+        }
+
+        /** Set Volume (Percent)
+         * @param int $volume
+         */
+        public function SetVolume(int $volume)
+        {
+            $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/volume?volume_percent=' . $volume);
+        }
+
+        public function GetVolume()
+        {
+            $result = $this->CurrentPlayback();
+            $current_volume = $result['device']['volume_percent'];
+            $this->SetValue('Volume', $current_volume);
+            return $current_volume;
         }
 
         public function Play()
@@ -254,6 +346,13 @@ declare(strict_types=1);
 
             $this->MakeRequest('PUT', $url, json_encode($body));
             $this->SetValue('Action', self::PLAY);
+        }
+
+        public function Search_Configform(string $SearchQuery, bool $SearchAlbums, bool $SearchArtists, bool $SearchPlaylists, bool $SearchTracks)
+        {
+            $resultList = $this->Search($SearchQuery, $SearchAlbums, $SearchArtists, $SearchPlaylists, $SearchTracks);
+            $this->UpdateFormField('SearchResults', 'values', json_encode($resultList));
+            $this->UpdateFormField('SearchResults', 'rowCount', 20);
         }
 
         public function Search(string $SearchQuery, bool $SearchAlbums, bool $SearchArtists, bool $SearchPlaylists, bool $SearchTracks)
@@ -336,12 +435,10 @@ declare(strict_types=1);
                     ];
                 }
             }
-
-            $this->UpdateFormField('SearchResults', 'values', json_encode($resultList));
-            $this->UpdateFormField('SearchResults', 'rowCount', 20);
+            return $resultList;
         }
 
-        public function AddSearchResultToFavorites($SearchResult)
+        public function AddSearchResultToFavorites(array $SearchResult)
         {
             if ($SearchResult['add']) {
                 unset($SearchResult['add']);
@@ -369,7 +466,7 @@ declare(strict_types=1);
             }
         }
 
-        public function AddPlaylistToFavorites($Playlist)
+        public function AddPlaylistToFavorites(array $Playlist)
         {
             if ($Playlist['add']) {
                 $newFavorite = [
@@ -427,14 +524,63 @@ declare(strict_types=1);
             $this->SetValue('Shuffle', $Shuffle);
         }
 
+        public function UpdatePosition()
+        {
+            if ($this->ReadAttributeString('Token') != '') {
+                $currentPlay = $this->requestCurrentPlay();
+                $current_volume = $currentPlay['device']['volume_percent'];
+                $this->SetValue('Volume', $current_volume);
+                $this->SendDebug('Volume', $current_volume, 0);
+
+                $progress_ms = $currentPlay['progress_ms'];
+                $this->SendDebug('Progress ms', $progress_ms, 0);
+                $this->SendDebug('Current Position ms', $progress_ms, 0);
+                $progress = $this->ConvertTimeInterval($progress_ms);
+                $this->SendDebug('Progress', $progress, 0);
+                // $album = $currentPlay['item']['album'];
+
+                $duration_ms = $currentPlay['item']['duration_ms'];
+                $this->SendDebug('Duration ms', $duration_ms, 0);
+                $duration = $this->ConvertTimeInterval($duration_ms);
+                $this->SendDebug('Duration', $duration, 0);
+                $this->SetValue('Duration', $duration);
+
+                $remaining_time = $this->GetRemainingTime($progress_ms, $duration_ms);
+                $this->SendDebug('Remaining Time', $remaining_time, 0);
+                $this->SetValue('Remaining_Time', $remaining_time);
+
+                $current_position = $this->ConvertTimeInterval($progress_ms);
+                $this->SendDebug('Current Position', $current_position, 0);
+                $this->SetValue('Current_Position', $current_position);
+
+                $position = $this->GetSongPosition($progress_ms, $duration_ms);
+                $this->SendDebug('Position', strval($position), 0);
+                $this->SetValue('Position', $position);
+            }
+        }
+
         public function UpdateVariables()
         {
+            $resetCurrentPlaying = function (bool $resetCommands = false)
+            {
+                $this->SendDebug('Reset', 'Current Playing', 0);
+                $this->SetValue('CurrentTrack', self::PLACEHOLDER_NONE);
+                $this->SetValue('CurrentArtist', self::PLACEHOLDER_NONE);
+                $this->SetValue('CurrentAlbum', self::PLACEHOLDER_NONE);
+                $this->SetValue('CurrentCover', '');
+                if ($resetCommands) {
+                    $this->SetValue('Action', self::PAUSE);
+                    $this->SetValue('Repeat', self::REPEAT_OFF);
+                    $this->SetValue('Shuffle', false);
+                }
+            };
             // The following updates won't work or make no sense if there is no token yet
             if ($this->ReadAttributeString('Token') != '') {
                 $this->UpdateFavoritesProfile();
                 $this->UpdateDevices();
 
                 $currentPlay = $this->requestCurrentPlay();
+
                 if ($this->isPlaybackActive($currentPlay)) {
                     $this->SetValue('Action', self::PLAY);
                     switch ($currentPlay['repeat_state']) {
@@ -452,15 +598,65 @@ declare(strict_types=1);
                     }
 
                     $this->SetValue('Shuffle', $currentPlay['shuffle_state']);
+
+                    if (isset($currentPlay['item']['type'])) {
+                        switch ($currentPlay['item']['type']) {
+                            case 'track':
+                                $this->SetValue('CurrentTrack', $currentPlay['item']['name']);
+                                $artists = [];
+                                foreach ($currentPlay['item']['artists'] as $artist) {
+                                    $artists[] = $artist['name'];
+                                }
+                                $this->SetValue('CurrentArtist', implode(', ', $artists));
+                                $this->SetValue('CurrentAlbum', $currentPlay['item']['album']['name']);
+                                $coverFound = false;
+                                if (isset($currentPlay['item']['album']['images'])) {
+                                    foreach ($currentPlay['item']['album']['images'] as &$imageObject) {
+                                        if ((($imageObject['height'] <= $this->ReadPropertyInteger('CoverMaxHeight')) || ($this->ReadPropertyInteger('CoverMaxHeight') == 0)) &&
+                                        (($imageObject['width'] <= $this->ReadPropertyInteger('CoverMaxWidth')) ||  ($this->ReadPropertyInteger('CoverMaxWidth') == 0))) {
+                                            $coverFound = true;
+                                            $newValue = '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">';
+                                            if ($this->GetValue('CurrentCover') != $newValue) {
+                                                $this->SetValue('CurrentCover', $newValue);
+                                            }
+                                            break;
+                                        }   
+                                    }
+                                }
+                                if (!$coverFound && ($this->GetValue('CurrentCover')) != '') {
+                                    $this->SetValue('CurrentCover', '');
+                                }
+                                break;
+
+                            case 'episode':
+                                $this->SetValue('CurrentTrack', $currentPlay['item']['name']);
+                                $artists = [];
+                                foreach ($currentPlay['item']['artists'] as $artist) {
+                                    $artists[] = $artist['name'];
+                                }
+                                $this->SetValue('CurrentArtist', $currentPlay['item']['show']['publisher']);
+                                $this->SetValue('CurrentAlbum', $currentPlay['item']['show']['name']);
+                                if (isset($currentPlay['item']['show']['images'][0])) {
+                                    $imageObject = $currentPlay['item']['show']['images'][0];
+                                    $this->SetValue('CurrentCover', '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">');
+                                } else {
+                                    $this->SetValue('CurrentCover', '');
+                                }
+                                break;
+
+                            default:
+                                $resetCurrentPlaying();
+                                break;
+
+                        }
+                    } else {
+                        $resetCurrentPlaying();
+                    }
                 } else {
-                    $this->SetValue('Action', self::PAUSE);
-                    $this->SetValue('Repeat', self::REPEAT_OFF);
-                    $this->SetValue('Shuffle', false);
+                    $resetCurrentPlaying(true);
                 }
             } else {
-                $this->SetValue('Action', self::PAUSE);
-                $this->SetValue('Repeat', self::REPEAT_OFF);
-                $this->SetValue('Shuffle', false);
+                $resetCurrentPlaying(true);
             }
         }
 
@@ -744,5 +940,53 @@ declare(strict_types=1);
                 $this->UpdateFormField('Favorites', 'values', json_encode($this->GetTranslatedFavorites()));
                 $this->UpdateFavoritesProfile();
             }
+        }
+
+        /** Convert Time Interval
+         * @param $milliseconds
+         * @return string
+         */
+        private function ConvertTimeInterval(int $milliseconds)
+        {
+            //$uSec = $milliseconds % 1000;
+            $input = floor($milliseconds / 1000);
+
+            $seconds = $input % 60;
+            if (strlen(strval($seconds)) < 2) {
+                $seconds = "0" . $seconds;
+            }
+            $input = floor($input / 60);
+
+            $minutes = $input % 60;
+
+            $formatted_time = $minutes . ":" . $seconds;
+            return $formatted_time;
+        }
+
+        /** Get Remaining Time
+         * @param int $current_position
+         * @param int $duration
+         * @return string
+         */
+        private function GetRemainingTime(int $current_position, int $duration)
+        {
+            $milliseconds = $duration - $current_position;
+            $input = floor($milliseconds / 1000);
+
+            $seconds = $input % 60;
+            if (strlen(strval($seconds)) < 2) {
+                $seconds = "0" . $seconds;
+            }
+            $input = floor($input / 60);
+
+            $minutes = $input % 60;
+            $remaining_time = $minutes . ":" . $seconds;
+            return $remaining_time;
+        }
+
+        private function GetSongPosition(int $current_position, int $duration)
+        {
+            $position = floor($current_position * (100 / $duration));
+            return $position;
         }
     }

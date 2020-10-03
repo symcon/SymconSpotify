@@ -4,6 +4,9 @@
             "Advanced Settings": "Erweiterte Einstellungen",
             "Update Interval": "Aktualisierungsintervall",
             "seconds": "Sekunden",
+            "Cover: Maximum Width (0 = No Limit)": "Cover: Maximale Breite (0 = Kein Limit)",
+            "Cover: Maximum Height (0 = No Limit)": "Cover: Maximale Höhe (0 = Kein Limit)",
+            "px": "px",
             "Register": "Registrieren",
             "Search": "Suche",
             "Search for Albums": "Suche nach Alben",
@@ -28,7 +31,16 @@
             "Off": "Aus",
             "Context": "Kontext",
             "Repeat": "Wiederholen",
-            "Shuffle": "Zufällige Wiedergabe"
+            "Shuffle": "Zufällige Wiedergabe",
+            "Current Track": "Aktueller Song",
+            "Current Artist": "Aktueller Künstler",
+            "Current Album": "Aktuelles Album",
+            "Current Cover": "Aktuelles Cover",
+            "Volume": "Lautstärke",
+            "Position": "Position",
+            "Current Position": "Aktuelle Position",
+            "Duration": "Dauer",
+            "Remaining Time": "Verbleibende Zeit"
         }
     }
 }

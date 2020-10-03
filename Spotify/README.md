@@ -28,13 +28,14 @@ Innerhalb des Moduls werden Favoriten gespeichert, welche dann komfortabel aus d
 
 ### 3. Software-Installation
 
-* Über den Module Store das Modul Spotify installieren.
+* Über den Module Store das 'Spotify'-Modul installieren.
 * Alternativ über das Module Control folgende URL hinzufügen:
-`https://github.com/DrNiels/Spotify`  
+`https://github.com/symcon/SymconSpotify`  
 
 ### 4. Einrichten der Instanzen in IP-Symcon
 
-- Unter "Instanz hinzufügen" ist das 'Spotify'-Modul unter dem Hersteller 'Spotify' aufgeführt.  
+ - Unter 'Instanz hinzufügen' kann das 'Spotify'-Modul mithilfe des Schnellfilters gefunden werden.
+    - Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
 
 __Konfigurationsseite__:
 
@@ -46,6 +47,8 @@ ___Erweiterte Einstellungen___
 Name                     | Beschreibung
 ------------------------ | ---------------------------------
 Aktualisierungsintervall | In diesem Intervall werden die Werte der Statusvariablen mit der aktuellen Wiedergabe von Spotify abgeglichen. Dies beinhaltet das Gerät, Wiedergabe oder Pause, Zufallswiedergabe und Wiederholung
+Cover: Maximale Breite   | Maximale Breite des dargestellten Covers
+Cover: Maximale Höhe     | Maximale Höhe des dargestellten Covers
 
 ___Suche___
 
@@ -69,6 +72,10 @@ Die Statusvariablen/Kategorien werden automatisch angelegt. Das Löschen einzeln
 
 Name                 | Typ     | Beschreibung
 -------------------- | ------- | ----------------
+Aktuelles Cover      | HTMLBox | Hier wird das Cover des aktuell abgespielten Albums dargestellt, sofern vorhanden
+Aktueller Song       | string  | Hier wird der Name des aktuell abgespielten Songs angezeigt
+Aktueller Künstler   | string  | Hier wird der Künstler des aktuell abgespielten Songs angezeigt
+Aktuelles Album      | string  | Hier wird das Album des aktuell abgespielten Songs angezeigt
 Aktion               | integer | Hierüber kann eine Wiedergabe gestartet oder pausiert werden. Außerdem ist es möglich auf den vorherigen oder nächsten Song zu wechseln
 Gerät                | integer | Mit dieser Variable kann ein Wiedergabegerät ausgewählt werden. Ist aktuell eine Wiedergabe aktiv, so wird diese auf das neue Gerät gewechselt
 Favorit              | integer | Diese Variable stellt die im Modul konfigurierten Favoriten dar. Durch die Auswahl eines Favoriten wird dieser auf dem aktuell gewählten Gerät abgespielt
@@ -77,12 +84,11 @@ Zufällige Wiedergabe | boolean | Aktiviert bzw. deaktiviert die zufällige Wied
 
 ##### Profile:
 
-Name                          | Typ
------------------------------ | ------- 
-Spotify.Favoriter.<InstanzID> | Integer
-Spotify.Actions               | Integer
-Spotify.Devices               | Integer
-Spotify.Repeat                | Integer
+Name                                | Typ
+----------------------------------- | ------- 
+Spotify.Favorites.&lt;InstanzID&gt; | Integer
+Spotify.Devices                     | Integer
+Spotify.Repeat                      | Integer
 
 ### 6. WebFront
 
