@@ -35,7 +35,12 @@
             "Current Track": "Aktueller Song",
             "Current Artist": "Aktueller Künstler",
             "Current Album": "Aktuelles Album",
-            "Current Cover": "Aktuelles Cover"
+            "Current Cover": "Aktuelles Cover",
+            "Volume": "Lautstärke",
+            "Position": "Position",
+            "Current Position": "Aktuelle Position",
+            "Duration": "Dauer",
+            "Remaining Time": "Verbleibende Zeit"
         }
     }
 }

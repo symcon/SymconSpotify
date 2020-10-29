@@ -67,7 +67,7 @@
                     "type": "Button",
                     "name": "Search",
                     "caption": "Start Search",
-                    "onClick": "SPO_Search($id, $SearchQuery, $SearchAlbums, $SearchArtists, $SearchPlaylists, $SearchTracks);"
+                    "onClick": "SPO_Search_Configform($id, $SearchQuery, $SearchAlbums, $SearchArtists, $SearchPlaylists, $SearchTracks);"
                 }
             ]
         },
