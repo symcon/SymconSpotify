@@ -263,6 +263,12 @@ declare(strict_types=1);
             return $currentPlaylist = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/playlists/' . $playlist_id . '/tracks'), true);
         }
 
+        /**
+         * @param string $method
+         * @param string $url
+         * @return false|string
+         * @throws Exception
+         */
         public function CustomCommand(string $method, string $url)
         {
             $currentPlay = $this->requestCurrentPlay();
@@ -534,34 +540,40 @@ declare(strict_types=1);
         {
             if ($this->ReadAttributeString('Token') != '') {
                 $currentPlay = $this->requestCurrentPlay();
-                $current_volume = $currentPlay['device']['volume_percent'];
-                $this->SetValue('Volume', $current_volume);
-                $this->SendDebug('Volume', $current_volume, 0);
+                if(empty($currentPlay))
+                {
+                    $this->SetValue('Position', 0);
+                }
+                else{
+                    $current_volume = $currentPlay['device']['volume_percent'];
+                    $this->SetValue('Volume', $current_volume);
+                    $this->SendDebug('Volume', $current_volume, 0);
 
-                $progress_ms = $currentPlay['progress_ms'];
-                $this->SendDebug('Progress ms', $progress_ms, 0);
-                $this->SendDebug('Current Position ms', $progress_ms, 0);
-                $progress = $this->ConvertTimeInterval($progress_ms);
-                $this->SendDebug('Progress', $progress, 0);
-                // $album = $currentPlay['item']['album'];
+                    $progress_ms = $currentPlay['progress_ms'];
+                    $this->SendDebug('Progress ms', $progress_ms, 0);
+                    $this->SendDebug('Current Position ms', $progress_ms, 0);
+                    $progress = $this->ConvertTimeInterval($progress_ms);
+                    $this->SendDebug('Progress', $progress, 0);
+                    // $album = $currentPlay['item']['album'];
 
-                $duration_ms = $currentPlay['item']['duration_ms'];
-                $this->SendDebug('Duration ms', $duration_ms, 0);
-                $duration = $this->ConvertTimeInterval($duration_ms);
-                $this->SendDebug('Duration', $duration, 0);
-                $this->SetValue('Duration', $duration);
+                    $duration_ms = $currentPlay['item']['duration_ms'];
+                    $this->SendDebug('Duration ms', $duration_ms, 0);
+                    $duration = $this->ConvertTimeInterval($duration_ms);
+                    $this->SendDebug('Duration', $duration, 0);
+                    $this->SetValue('Duration', $duration);
 
-                $remaining_time = $this->GetRemainingTime($progress_ms, $duration_ms);
-                $this->SendDebug('Remaining Time', $remaining_time, 0);
-                $this->SetValue('Remaining_Time', $remaining_time);
+                    $remaining_time = $this->GetRemainingTime($progress_ms, $duration_ms);
+                    $this->SendDebug('Remaining Time', $remaining_time, 0);
+                    $this->SetValue('Remaining_Time', $remaining_time);
 
-                $current_position = $this->ConvertTimeInterval($progress_ms);
-                $this->SendDebug('Current Position', $current_position, 0);
-                $this->SetValue('Current_Position', $current_position);
+                    $current_position = $this->ConvertTimeInterval($progress_ms);
+                    $this->SendDebug('Current Position', $current_position, 0);
+                    $this->SetValue('Current_Position', $current_position);
 
-                $position = $this->GetSongPosition($progress_ms, $duration_ms);
-                $this->SendDebug('Position', strval($position), 0);
-                $this->SetValue('Position', $position);
+                    $position = $this->GetSongPosition($progress_ms, $duration_ms);
+                    $this->SendDebug('Position', strval($position), 0);
+                    $this->SetValue('Position', $position);
+                }
             }
         }
 
