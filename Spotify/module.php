@@ -334,7 +334,7 @@ declare(strict_types=1);
 
         public function PlayTrack(string $track_id)
         {
-			$this->MakeRequest('POST', 'https://api.spotify.com/v1/tracks/' . $track_id);
+            $this->MakeRequest('POST', 'https://api.spotify.com/v1/tracks/' . $track_id);
         }
 
         public function PlayURI(string $URI)
@@ -625,7 +625,7 @@ declare(strict_types=1);
                                 $this->SetValue('CurrentArtist', implode(', ', $artists));
                                 $this->SetValue('CurrentAlbum', $currentPlay['item']['album']['name']);
                                 $coverFound = false;
-								if (isset($currentPlay['item']['album']['images'])) {
+                                if (isset($currentPlay['item']['album']['images'])) {
                                     foreach ($currentPlay['item']['album']['images'] as &$imageObject) {
                                         if ((($imageObject['height'] <= $this->ReadPropertyInteger('CoverMaxHeight')) || ($this->ReadPropertyInteger('CoverMaxHeight') == 0)) &&
                                         (($imageObject['width'] <= $this->ReadPropertyInteger('CoverMaxWidth')) || ($this->ReadPropertyInteger('CoverMaxWidth') == 0))) {
