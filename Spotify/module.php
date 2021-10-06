@@ -31,23 +31,34 @@ declare(strict_types=1);
 
             $this->RegisterAttributeString('Token', '');
             $this->RegisterAttributeString('Favorites', '[]');
-            $this->RegisterAttributeString('DeviceIDs', '[]');
 
             $profileNameFavorites = 'Spotify.Favorites.' . $this->InstanceID;
+
+            // Before there were String associations, favorites was an Integer Profile, so we delete that in case we come from an outdated version
+            if (IPS_VariableProfileExists($profileNameFavorites) && (IPS_GetVariableProfile($profileNameFavorites)['ProfileType'] !== VARIABLETYPE_STRING)) {
+                IPS_DeleteVariableProfile($profileNameFavorites);
+            }
+
             // Associations will be added later in ApplyChanges
             if (!IPS_VariableProfileExists($profileNameFavorites)) {
-                IPS_CreateVariableProfile($profileNameFavorites, 1); // Integer
+                IPS_CreateVariableProfile($profileNameFavorites, VARIABLETYPE_STRING);
             }
 
             $profileNameDevices = 'Spotify.Devices';
-            if (!IPS_VariableProfileExists($profileNameDevices)) {
-                IPS_CreateVariableProfile($profileNameDevices, 1);
+
+            // Before there were String associations, devices was an Integer Profile, so we delete that in case we come from an outdated version
+            if (IPS_VariableProfileExists($profileNameDevices) && (IPS_GetVariableProfile($profileNameDevices)['ProfileType'] !== VARIABLETYPE_STRING)) {
+                IPS_DeleteVariableProfile($profileNameDevices);
             }
 
-            $this->RegisterVariableInteger('Favorite', $this->Translate('Favorite'), $profileNameFavorites, 50);
+            if (!IPS_VariableProfileExists($profileNameDevices)) {
+                IPS_CreateVariableProfile($profileNameDevices, VARIABLETYPE_STRING);
+            }
+
+            $this->RegisterVariableString('Favorite', $this->Translate('Favorite'), $profileNameFavorites, 50);
             $this->EnableAction('Favorite');
 
-            $this->RegisterVariableInteger('Device', $this->Translate('Device'), $profileNameDevices, 50);
+            $this->RegisterVariableString('Device', $this->Translate('Device'), $profileNameDevices, 50);
             $this->EnableAction('Device');
 
             $this->RegisterVariableInteger('Action', $this->Translate('Action'), '~PlaybackPreviousNext', 40);
@@ -136,8 +147,7 @@ declare(strict_types=1);
         {
             switch ($Ident) {
                 case 'Favorite':
-                    $favorites = json_decode($this->ReadAttributeString('Favorites'), true);
-                    $this->PlayURI($favorites[$Value]['uri']);
+                    $this->PlayURI($Value);
                     $this->SetValue($Ident, $Value);
                     $this->UpdateVariables();
                     break;
@@ -566,12 +576,7 @@ declare(strict_types=1);
 
         private function getCurrentDeviceID()
         {
-            $deviceIDs = json_decode($this->ReadAttributeString('DeviceIDs'), true);
-            if (isset($deviceIDs[GetValue($this->GetIDForIdent('Device'))])) {
-                return urlencode($deviceIDs[GetValue($this->GetIDForIdent('Device'))]);
-            } else {
-                return '';
-            }
+            return $this->GetValue('Device');
         }
 
         private function requestCurrentPlay()
@@ -753,7 +758,7 @@ declare(strict_types=1);
                         $name = $favorite['track'];
                         break;
                 }
-                IPS_SetVariableProfileAssociation($profileName, $index, $this->Translate($favorite['type']) . ': ' . $name, '', -1);
+                IPS_SetVariableProfileAssociation($profileName, $favorite['uri'], $this->Translate($favorite['type']) . ': ' . $name, '', -1);
             }
         }
 
@@ -771,19 +776,13 @@ declare(strict_types=1);
             }
 
             $devices = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/player/devices'), true);
-            $deviceIDs = [];
 
-            foreach ($devices['devices'] as $index => $device) {
-                IPS_SetVariableProfileAssociation($profileName, $index, $device['name'], '', -1);
-                $deviceIDs[$index] = $device['id'];
+            foreach ($devices['devices'] as $device) {
+                IPS_SetVariableProfileAssociation($profileName, $device['id'], $device['name'], '', -1);
                 if ($device['is_active']) {
-                    $this->SetValue('Device', $index);
+                    $this->SetValue('Device', $device['id']);
                 }
             }
-
-            $this->WriteAttributeString('DeviceIDs', json_encode($deviceIDs));
-            $this->RegisterVariableInteger('Device', $this->Translate('Device'), $profileName, 0);
-            $this->EnableAction('Device');
         }
 
         private function GetTranslatedFavorites()
