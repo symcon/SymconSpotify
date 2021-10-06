@@ -37,7 +37,10 @@
             "Current Album": "Aktuelles Album",
             "Current Cover": "Aktuelles Cover",
             "Volume": "Lautstärke",
-            "The current device does not suppport setting the volume": "Das aktuelle Gerät unterstützt keine Einstellung der Lautstärke"
+            "The current device does not suppport setting the volume": "Das aktuelle Gerät unterstützt keine Einstellung der Lautstärke",
+            "Position": "Position",
+            "Duration": "Dauer",
+            "Progress": "Fortschritt"
         }
     }
 }
