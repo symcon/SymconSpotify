@@ -55,6 +55,16 @@ declare(strict_types=1);
                 IPS_CreateVariableProfile($profileNameDevices, VARIABLETYPE_STRING);
             }
 
+            $profileNameVolume = 'Spotify.Volume';
+
+            // Associations will be added later in ApplyChanges
+            if (!IPS_VariableProfileExists($profileNameVolume)) {
+                IPS_CreateVariableProfile($profileNameVolume, VARIABLETYPE_INTEGER);
+                IPS_SetVariableProfileValues($profileNameVolume, 0, 100, 1);
+                IPS_SetVariableProfileText($profileNameVolume, '', '%');
+                IPS_SetVariableProfileIcon($profileNameVolume, 'Speaker');
+            }
+
             $this->RegisterVariableString('Favorite', $this->Translate('Favorite'), $profileNameFavorites, 50);
             $this->EnableAction('Favorite');
 
@@ -63,6 +73,9 @@ declare(strict_types=1);
 
             $this->RegisterVariableInteger('Action', $this->Translate('Action'), '~PlaybackPreviousNext', 40);
             $this->EnableAction('Action');
+
+            $this->RegisterVariableInteger('Volume', $this->Translate('Volume'), $profileNameVolume, 45);
+            $this->EnableAction('Volume');
 
             $profileNameRepeat = 'Spotify.Repeat';
             if (!IPS_VariableProfileExists($profileNameRepeat)) {
@@ -192,6 +205,23 @@ declare(strict_types=1);
                     $this->SetShuffle($Value);
                     break;
 
+                case 'Volume': {
+                    $response = json_decode($this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/volume?volume_percent=' . json_encode($Value), '', true), true);
+                    if (isset($response['error']['reason'])) {
+                        switch ($response['error']['reason']) {
+                            case 'VOLUME_CONTROL_DISALLOW':
+                                echo $this->Translate('The current device does not suppport setting the volume');
+                                break;
+
+                            default:
+                                echo $response['error']['message'];
+                                break;
+                        }
+                    } else {
+                        $this->SetValue('Volume', $Value);
+                    }
+                    break;
+                }
             }
         }
 
@@ -473,6 +503,8 @@ declare(strict_types=1);
 
                     $this->SetValue('Shuffle', $currentPlay['shuffle_state']);
 
+                    $this->SetValue('Volume', $currentPlay['device']['volume_percent']);
+
                     if (isset($currentPlay['item']['type'])) {
                         switch ($currentPlay['item']['type']) {
                             case 'track':
@@ -699,7 +731,7 @@ declare(strict_types=1);
             return $Token;
         }
 
-        private function MakeRequest($method, $url, $body = '')
+        private function MakeRequest($method, $url, $body = '', $ignoreErrors = false)
         {
             $header = 'Authorization: Bearer ' . $this->FetchAccessToken() . "\r\n" . 'Content-Type: application/json';
             if (in_array($method, ['POST', 'PUT'])) {
@@ -715,6 +747,10 @@ declare(strict_types=1);
 
             if ($body != '') {
                 $opts['http']['content'] = $body;
+            }
+
+            if ($ignoreErrors) {
+                $opts['http']['ignore_errors'] = true;
             }
 
             $this->SendDebug('Request URL', $url, 0);
