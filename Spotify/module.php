@@ -662,7 +662,14 @@ declare(strict_types=1);
 
         private function requestCurrentPlay()
         {
-            return json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/player'), true);
+            // The response could be false, which cannot be JSON decoded
+            $response = $this->MakeRequest('GET', 'https://api.spotify.com/v1/me/player');
+            if (is_string($response)) {
+                return json_decode($response, true);
+            }
+            else {
+                return $response;
+            }
         }
 
         private function isPlaybackActive($currentPlay = false)
