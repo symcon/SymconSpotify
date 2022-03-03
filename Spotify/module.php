@@ -665,7 +665,13 @@ declare(strict_types=1);
             // The response could be false, which cannot be JSON decoded
             $response = $this->MakeRequest('GET', 'https://api.spotify.com/v1/me/player', '', true);
             if (is_string($response)) {
-                return json_decode($response, true);
+                $result = json_decode($response, true);
+                if (isset($result['error'])) {
+                    return false;
+                }
+                else {
+                    return $result;
+                }
             }
             else {
                 return $response;
