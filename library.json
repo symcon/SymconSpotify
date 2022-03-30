@@ -1,12 +1,12 @@
 {
-	"id": "{552185E5-64DD-1F22-40E0-CE1CF723BCB1}",
-	"author": "Symcon GmbH",
-	"name": "Spotify",
-	"url": "https://www.symcon.de/",
-	"version": "1.2",
-	"build": 0,
-	"date": 0,
-	"compatibility": {
-		"version": "6.0"
-	}
+    "id": "{552185E5-64DD-1F22-40E0-CE1CF723BCB1}",
+    "author": "Symcon GmbH",
+    "name": "Spotify",
+    "url": "https://www.symcon.de/",
+    "version": "1.2",
+    "build": 0,
+    "date": 0,
+    "compatibility": {
+        "version": "6.0"
+    }
 }

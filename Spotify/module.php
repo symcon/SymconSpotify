@@ -108,7 +108,6 @@ declare(strict_types=1);
             $this->RegisterVariableInteger('CurrentProgress', $this->Translate('Progress'), $profileNameProgress, 36);
             $this->EnableAction('CurrentProgress');
 
-
             $this->RegisterTimer('UpdateTimer', 0, 'SPO_UpdateVariables($_IPS["TARGET"]);');
             $this->RegisterTimer('UpdateProgressTimer', 0, 'SPO_UpdateProgress($_IPS["TARGET"]);');
         }
@@ -238,7 +237,7 @@ declare(strict_types=1);
                     break;
                 }
 
-                case 'CurrentProgress': 
+                case 'CurrentProgress':
                     $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/seek?position_ms=' . json_encode($Value * 1000));
                     $this->SetValue('CurrentProgress', $Value);
                     $this->SetValue('CurrentPosition', $this->msToDuration($Value * 1000));
@@ -532,7 +531,7 @@ declare(strict_types=1);
 
                     $this->SetValue('CurrentPosition', $this->msToDuration($currentPlay['progress_ms']));
                     $this->SetValue('CurrentProgress', floor($currentPlay['progress_ms'] / 1000));
-                    
+
                     $this->SetTimerInterval('UpdateProgressTimer', 1000);
 
                     if (isset($currentPlay['item']['type'])) {
@@ -599,14 +598,15 @@ declare(strict_types=1);
             }
         }
 
-        public function UpdateProgress() {
+        public function UpdateProgress()
+        {
             $currentDuration = IPS_GetVariableProfile('Spotify.Progress.' . $this->InstanceID)['MaxValue'];
             $this->SetValue('CurrentProgress', min($currentDuration, $this->GetValue('CurrentProgress') + 1));
             $this->SetValue('CurrentPosition', $this->msToDuration($this->GetValue('CurrentProgress') * 1000));
             // If song should be finished, update variables
             if ($this->GetValue('CurrentProgress') == $currentDuration) {
                 $this->UpdateVariables();
-            } 
+            }
         }
 
         public function ResetToken()
@@ -640,7 +640,8 @@ declare(strict_types=1);
             }
         }
 
-        private function msToDuration($ms) {
+        private function msToDuration($ms)
+        {
             $minutes = floor($ms / 60 / 1000);
             $seconds = floor($ms / 1000) - ($minutes * 60);
             return "$minutes:" . str_pad(strval($seconds), 2, '0', STR_PAD_LEFT);
@@ -668,12 +669,10 @@ declare(strict_types=1);
                 $result = json_decode($response, true);
                 if (isset($result['error'])) {
                     return false;
-                }
-                else {
+                } else {
                     return $result;
                 }
-            }
-            else {
+            } else {
                 return $response;
             }
         }
