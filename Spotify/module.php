@@ -160,6 +160,9 @@ declare(strict_types=1);
                                     }
                                     $form[$area][$index]['values'] = $userPlaylists;
                                 } catch (Exception $e) {
+                                    for ($i = 1; $i < count($form['actions']); $i++) {
+                                        $form['actions'][$i]['visible'] = false;
+                                    }
                                 }
                             }
                         }
@@ -486,6 +489,7 @@ declare(strict_types=1);
 
         public function UpdateVariables()
         {
+            $this->SetStatus(102);
             $resetCurrentPlaying = function (bool $resetCommands = false)
             {
                 $this->SendDebug('Reset', 'Current Playing', 0);
@@ -594,6 +598,7 @@ declare(strict_types=1);
                     $resetCurrentPlaying(true);
                 }
             } else {
+                $this->SetStatus(104);
                 $resetCurrentPlaying(true);
             }
         }
@@ -631,7 +636,7 @@ declare(strict_types=1);
                 $this->SendDebug('ProcessOAuthData', "OK! Let's save the Refresh Token permanently", 0);
 
                 $this->WriteAttributeString('Token', $token);
-
+                $this->SetStatus(102);
                 $this->ReloadForm();
             } else {
 
@@ -757,9 +762,10 @@ declare(strict_types=1);
                 //If we slipped here we need to fetch the access token
                 $options = [
                     'http' => [
-                        'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
-                        'method'  => 'POST',
-                        'content' => http_build_query(['refresh_token' => $this->ReadAttributeString('Token')])
+                        'header'        => "Content-Type: application/x-www-form-urlencoded\r\n",
+                        'method'        => 'POST',
+                        'content'       => http_build_query(['refresh_token' => $this->ReadAttributeString('Token')]),
+                        'ignore_errors' => true
                     ]
                 ];
                 $context = stream_context_create($options);
@@ -768,6 +774,7 @@ declare(strict_types=1);
                 $data = json_decode($result);
 
                 if (!isset($data->token_type) || $data->token_type != 'Bearer') {
+                    $this->SetStatus(104);
                     throw new Exception('Bearer Token expected');
                 }
 
