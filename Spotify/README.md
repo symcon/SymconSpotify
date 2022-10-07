@@ -150,3 +150,9 @@ Setzt die OAuth-Token und somit die Verknüpfung mit dem Spotify-Konto zurück.
 Die Funktion liefert keinerlei Rückgabewert.  
 Beispiel:  
 `SPO_ResetToken(12345);`
+
+`SPO_MakeAPIRequest(integer $InstanzID, string $Method, string $Url, string $Body);`  
+Stellt eine Anfrage an die Spotify Web-API mit den angegebenen Parametern. Dabei muss nur der endpunktspezifische Pfad angegeben werden, der allgemeine Teil, also https://api.spotify.com/v1 wird automatisch hinzugefügt  
+Die Funktion gibt die Rückgabe der API als String zurück oder false bei einem Fehler.  
+Beispiel:  
+`SPO_MakeAPIRequest(12345, 'GET', '/me', '');`

@@ -619,6 +619,13 @@ declare(strict_types=1);
             $this->WriteAttributeString('Token', '');
         }
 
+        public function MakeAPIRequest(string $Method, string $Url, string $Body) {
+            if (substr($Url, 0, 1) !== '/') {
+                $Url = '/' . $Url;
+            }
+            return $this->MakeRequest($Method, 'https://api.spotify.com/v1' . $Url, $Body);
+        }
+
         /**
          * This function will be called by the OAuth control. Visibility should be protected!
          */
