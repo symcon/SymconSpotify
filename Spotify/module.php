@@ -682,9 +682,13 @@ declare(strict_types=1);
             }
         }
 
-        private function isPlaybackActive($currentPlay = false)
+        // Default value is true, as that is not a possible return value of requrestCurrentPlay
+        // false is possible if the previously requested play was erroneous. If the callback was flaky,
+        // the current play would be requested again and could confirm that playback is active, even if
+        // the provided parameter, e.g., during update, could be false
+        private function isPlaybackActive($currentPlay = true)
         {
-            if ($currentPlay === false) {
+            if ($currentPlay === true) {
                 $currentPlay = $this->requestCurrentPlay();
             }
             return $currentPlay && $currentPlay['is_playing'];
