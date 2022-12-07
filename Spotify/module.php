@@ -55,25 +55,6 @@ declare(strict_types=1);
                 IPS_CreateVariableProfile($profileNameDevices, VARIABLETYPE_STRING);
             }
 
-            $profileNameProgress = 'Spotify.Progress.' . $this->InstanceID;
-
-            // Associations will be added later in ApplyChanges
-            if (!IPS_VariableProfileExists($profileNameProgress)) {
-                IPS_CreateVariableProfile($profileNameProgress, VARIABLETYPE_INTEGER);
-                IPS_SetVariableProfileValues($profileNameProgress, 0, 1, 1);
-                IPS_SetVariableProfileText($profileNameProgress, '', '%');
-            }
-
-            $profileNameVolume = 'Spotify.Volume';
-
-            // Associations will be added later in ApplyChanges
-            if (!IPS_VariableProfileExists($profileNameVolume)) {
-                IPS_CreateVariableProfile($profileNameVolume, VARIABLETYPE_INTEGER);
-                IPS_SetVariableProfileValues($profileNameVolume, 0, 100, 1);
-                IPS_SetVariableProfileText($profileNameVolume, '', '%');
-                IPS_SetVariableProfileIcon($profileNameVolume, 'Speaker');
-            }
-
             $this->RegisterVariableString('Favorite', $this->Translate('Favorite'), $profileNameFavorites, 50);
             $this->EnableAction('Favorite');
 
@@ -83,29 +64,21 @@ declare(strict_types=1);
             $this->RegisterVariableInteger('Action', $this->Translate('Action'), '~PlaybackPreviousNext', 40);
             $this->EnableAction('Action');
 
-            $this->RegisterVariableInteger('Volume', $this->Translate('Volume'), $profileNameVolume, 45);
+            $this->RegisterVariableInteger('Volume', $this->Translate('Volume'), '~Volume', 45);
             $this->EnableAction('Volume');
-
-            $profileNameRepeat = 'Spotify.Repeat';
-            if (!IPS_VariableProfileExists($profileNameRepeat)) {
-                IPS_CreateVariableProfile($profileNameRepeat, 1); // Integer
-                IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_OFF, $this->Translate('Off'), '', -1);
-                IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_CONTEXT, $this->Translate('Context'), '', -1);
-                IPS_SetVariableProfileAssociation($profileNameRepeat, self::REPEAT_TRACK, $this->Translate('Track'), '', -1);
-            }
-            $this->RegisterVariableInteger('Repeat', $this->Translate('Repeat'), $profileNameRepeat, 50);
+            $this->RegisterVariableInteger('Repeat', $this->Translate('Repeat'), '~Repeat', 50);
             $this->EnableAction('Repeat');
 
-            $this->RegisterVariableBoolean('Shuffle', $this->Translate('Shuffle'), '~Switch', 50);
+            $this->RegisterVariableBoolean('Shuffle', $this->Translate('Shuffle'), '~Shuffle', 50);
             $this->EnableAction('Shuffle');
 
-            $this->RegisterVariableString('CurrentTrack', $this->Translate('Current Track'), '', 10);
-            $this->RegisterVariableString('CurrentArtist', $this->Translate('Current Artist'), '', 20);
+            $this->RegisterVariableString('CurrentTrack', $this->Translate('Current Track'), '~Song', 10);
+            $this->RegisterVariableString('CurrentArtist', $this->Translate('Current Artist'), '~Artist', 20);
             $this->RegisterVariableString('CurrentAlbum', $this->Translate('Current Album'), '', 30);
             $this->RegisterVariableString('CurrentCover', $this->Translate('Current Cover'), '~HTMLBox', 0);
             $this->RegisterVariableString('CurrentPosition', $this->Translate('Position'), '', 32);
             $this->RegisterVariableString('CurrentDuration', $this->Translate('Duration'), '', 34);
-            $this->RegisterVariableInteger('CurrentProgress', $this->Translate('Progress'), $profileNameProgress, 36);
+            $this->RegisterVariableFloat('CurrentProgress', $this->Translate('Progress'), '~Progress', 36);
             $this->EnableAction('CurrentProgress');
 
             $this->RegisterTimer('UpdateTimer', 0, 'SPO_UpdateVariables($_IPS["TARGET"]);');
@@ -241,9 +214,10 @@ declare(strict_types=1);
                 }
 
                 case 'CurrentProgress':
-                    $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/seek?position_ms=' . json_encode($Value * 1000));
+                    $milliseconds = floor($Value * 0.01 * $this->durationToMs($this->GetValue('CurrentDuration')));
+                    $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/seek?position_ms=' . json_encode($milliseconds));
                     $this->SetValue('CurrentProgress', $Value);
-                    $this->SetValue('CurrentPosition', $this->msToDuration($Value * 1000));
+                    $this->SetValue('CurrentPosition', $this->msToDuration($milliseconds));
                     break;
             }
         }
@@ -534,13 +508,11 @@ declare(strict_types=1);
                     $this->SetValue('Volume', $currentPlay['device']['volume_percent']);
 
                     $this->SetValue('CurrentPosition', $this->msToDuration($currentPlay['progress_ms']));
-                    $this->SetValue('CurrentProgress', floor($currentPlay['progress_ms'] / 1000));
 
                     $this->SetTimerInterval('UpdateProgressTimer', 1000);
 
                     if (isset($currentPlay['item']['type'])) {
                         $this->SetValue('CurrentDuration', $this->msToDuration($currentPlay['item']['duration_ms']));
-                        IPS_SetVariableProfileValues('Spotify.Progress.' . $this->InstanceID, 0, floor($currentPlay['item']['duration_ms'] / 1000), 1);
 
                         switch ($currentPlay['item']['type']) {
                             case 'track':
@@ -594,6 +566,7 @@ declare(strict_types=1);
                     } else {
                         $resetCurrentPlaying();
                     }
+                    $this->SetValue('CurrentProgress', $currentPlay['progress_ms'] / $this->durationToMs($this->GetValue('CurrentDuration')) * 100);
                 } else {
                     $resetCurrentPlaying(true);
                 }
@@ -605,11 +578,12 @@ declare(strict_types=1);
 
         public function UpdateProgress()
         {
-            $currentDuration = IPS_GetVariableProfile('Spotify.Progress.' . $this->InstanceID)['MaxValue'];
-            $this->SetValue('CurrentProgress', min($currentDuration, $this->GetValue('CurrentProgress') + 1));
-            $this->SetValue('CurrentPosition', $this->msToDuration($this->GetValue('CurrentProgress') * 1000));
+            $currentDuration = $this->durationToMs($this->GetValue('CurrentDuration'));
+            $newPosition = min($currentDuration, $this->durationToMs($this->GetValue('CurrentPosition')) + 1000);
+            $this->SetValue('CurrentProgress', ($newPosition / $currentDuration) * 100);
+            $this->SetValue('CurrentPosition', $this->msToDuration($newPosition));
             // If song should be finished, update variables
-            if ($this->GetValue('CurrentProgress') == $currentDuration) {
+            if ($newPosition == $currentDuration) {
                 $this->UpdateVariables();
             }
         }
@@ -657,6 +631,16 @@ declare(strict_types=1);
             $minutes = floor($ms / 60 / 1000);
             $seconds = floor($ms / 1000) - ($minutes * 60);
             return "$minutes:" . str_pad(strval($seconds), 2, '0', STR_PAD_LEFT);
+        }
+
+        private function durationToMs($duration) {
+            $split = explode(':', $duration);
+            $result = 0;
+            while (sizeof($split) > 0) {
+                $result *= 60;
+                $result += intval(array_shift($split));
+            }
+            return $result * 1000;
         }
 
         private function isFavorite($URI)
