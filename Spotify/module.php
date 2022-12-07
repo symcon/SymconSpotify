@@ -593,7 +593,8 @@ declare(strict_types=1);
             $this->WriteAttributeString('Token', '');
         }
 
-        public function MakeAPIRequest(string $Method, string $Url, string $Body) {
+        public function MakeAPIRequest(string $Method, string $Url, string $Body)
+        {
             if (substr($Url, 0, 1) !== '/') {
                 $Url = '/' . $Url;
             }
@@ -633,10 +634,11 @@ declare(strict_types=1);
             return "$minutes:" . str_pad(strval($seconds), 2, '0', STR_PAD_LEFT);
         }
 
-        private function durationToMs($duration) {
+        private function durationToMs($duration)
+        {
             $split = explode(':', $duration);
             $result = 0;
-            while (sizeof($split) > 0) {
+            while (count($split) > 0) {
                 $result *= 60;
                 $result += intval(array_shift($split));
             }
