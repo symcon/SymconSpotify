@@ -75,11 +75,19 @@ declare(strict_types=1);
             $this->RegisterVariableString('CurrentTrack', $this->Translate('Current Track'), '~Song', 10);
             $this->RegisterVariableString('CurrentArtist', $this->Translate('Current Artist'), '~Artist', 20);
             $this->RegisterVariableString('CurrentAlbum', $this->Translate('Current Album'), '', 30);
-            $this->RegisterVariableString('CurrentCover', $this->Translate('Current Cover'), '~HTMLBox', 0);
             $this->RegisterVariableString('CurrentPosition', $this->Translate('Position'), '', 32);
             $this->RegisterVariableString('CurrentDuration', $this->Translate('Duration'), '', 34);
             $this->RegisterVariableFloat('CurrentProgress', $this->Translate('Progress'), '~Progress', 36);
             $this->EnableAction('CurrentProgress');
+
+            if ((@$this->GetIDForIdent('Cover') === false)) {
+                $coverID = IPS_CreateMedia(1);
+                IPS_SetParent($coverID, $this->InstanceID);
+                IPS_SetName($coverID, $this->Translate('Current Cover'));
+                IPS_SetIdent($coverID, 'Cover');
+                IPS_SetMediaFile($coverID, 'cover.' . $this->InstanceID . '.jpg', false);
+                IPS_SetMediaContent($coverID, '');
+            }
 
             $this->RegisterTimer('UpdateTimer', 0, 'SPO_UpdateVariables($_IPS["TARGET"]);');
             $this->RegisterTimer('UpdateProgressTimer', 0, 'SPO_UpdateProgress($_IPS["TARGET"]);');
@@ -473,7 +481,7 @@ declare(strict_types=1);
                 $this->SetValue('CurrentPosition', $this->msToDuration(0));
                 $this->SetValue('CurrentProgress', 0);
                 $this->SetValue('CurrentDuration', $this->msToDuration(0));
-                $this->SetValue('CurrentCover', '');
+                IPS_SetMediaContent($this->GetIDForIdent('Cover'), '');
                 $this->SetTimerInterval('UpdateProgressTimer', 0);
                 if ($resetCommands) {
                     $this->SetValue('Action', self::PAUSE);
@@ -513,49 +521,42 @@ declare(strict_types=1);
 
                     if (isset($currentPlay['item']['type'])) {
                         $this->SetValue('CurrentDuration', $this->msToDuration($currentPlay['item']['duration_ms']));
+                        $this->SetValue('CurrentProgress', $currentPlay['progress_ms'] / $this->durationToMs($this->GetValue('CurrentDuration')) * 100);
+
+                        $loadData = function($name, $album, $artist) {
+                            $this->SetValue('CurrentTrack', $name);
+                            $this->SetValue('CurrentArtist', $artist);
+                            $this->SetValue('CurrentAlbum', $album['name']);
+                            $coverFound = false;
+                            if (isset($album['images'])) {
+                                foreach ($album['images'] as &$imageObject) {
+                                    if ((($imageObject['height'] <= $this->ReadPropertyInteger('CoverMaxHeight')) || ($this->ReadPropertyInteger('CoverMaxHeight') == 0)) &&
+                                    (($imageObject['width'] <= $this->ReadPropertyInteger('CoverMaxWidth')) || ($this->ReadPropertyInteger('CoverMaxWidth') == 0))) {
+                                        $coverFound = true;
+                                        if ($this->GetBuffer('CoverURL') != $imageObject['url']) {
+                                            $this->SetBuffer('CoverURL', $imageObject['url']);
+                                            IPS_SetMediaContent($this->GetIDForIdent('Cover'), base64_encode(file_get_contents($imageObject['url']))); 
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!$coverFound) {
+                                IPS_SetMediaContent($this->GetIDForIdent('Cover'), '');
+                            }
+                        };
 
                         switch ($currentPlay['item']['type']) {
                             case 'track':
-                                $this->SetValue('CurrentTrack', $currentPlay['item']['name']);
                                 $artists = [];
                                 foreach ($currentPlay['item']['artists'] as $artist) {
                                     $artists[] = $artist['name'];
                                 }
-                                $this->SetValue('CurrentArtist', implode(', ', $artists));
-                                $this->SetValue('CurrentAlbum', $currentPlay['item']['album']['name']);
-                                $coverFound = false;
-                                if (isset($currentPlay['item']['album']['images'])) {
-                                    foreach ($currentPlay['item']['album']['images'] as &$imageObject) {
-                                        if ((($imageObject['height'] <= $this->ReadPropertyInteger('CoverMaxHeight')) || ($this->ReadPropertyInteger('CoverMaxHeight') == 0)) &&
-                                        (($imageObject['width'] <= $this->ReadPropertyInteger('CoverMaxWidth')) || ($this->ReadPropertyInteger('CoverMaxWidth') == 0))) {
-                                            $coverFound = true;
-                                            $newValue = '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" marginwidth="0" marginheight="0" src="' . $imageObject['url'] . '">';
-                                            if ($this->GetValue('CurrentCover') != $newValue) {
-                                                $this->SetValue('CurrentCover', $newValue);
-                                            }
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (!$coverFound && ($this->GetValue('CurrentCover')) != '') {
-                                    $this->SetValue('CurrentCover', '');
-                                }
+                                $loadData($currentPlay['item']['name'], $currentPlay['item']['album'], implode(', ', $artists));
                                 break;
 
                             case 'episode':
-                                $this->SetValue('CurrentTrack', $currentPlay['item']['name']);
-                                $artists = [];
-                                foreach ($currentPlay['item']['artists'] as $artist) {
-                                    $artists[] = $artist['name'];
-                                }
-                                $this->SetValue('CurrentArtist', $currentPlay['item']['show']['publisher']);
-                                $this->SetValue('CurrentAlbum', $currentPlay['item']['show']['name']);
-                                if (isset($currentPlay['item']['show']['images'][0])) {
-                                    $imageObject = $currentPlay['item']['show']['images'][0];
-                                    $this->SetValue('CurrentCover', '<iframe style="border: 0;" height="' . $imageObject['height'] . '" width = "' . $imageObject['width'] . '" src="' . $imageObject['url'] . '">');
-                                } else {
-                                    $this->SetValue('CurrentCover', '');
-                                }
+                                $loadData($currentPlay['item']['name'], $currentPlay['item']['show'], $currentPlay['item']['show']['publisher']);
                                 break;
 
                             default:
@@ -566,7 +567,6 @@ declare(strict_types=1);
                     } else {
                         $resetCurrentPlaying();
                     }
-                    $this->SetValue('CurrentProgress', $currentPlay['progress_ms'] / $this->durationToMs($this->GetValue('CurrentDuration')) * 100);
                 } else {
                     $resetCurrentPlaying(true);
                 }
