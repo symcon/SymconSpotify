@@ -252,7 +252,7 @@ declare(strict_types=1);
                             $body['offset'] = [
                                 'uri' => $list['entries'][$list['current']]['uri']
                             ];
-                
+
                             $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/play', json_encode($body));
                             break;
 
@@ -1032,7 +1032,8 @@ declare(strict_types=1);
             }
         }
 
-        private function SkipTracks($number) {
+        private function SkipTracks($number)
+        {
             for ($i = 0; $i < $number; $i++) {
                 $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/next');
             }
