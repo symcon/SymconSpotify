@@ -79,6 +79,8 @@ declare(strict_types=1);
             $this->RegisterVariableString('CurrentDuration', $this->Translate('Duration'), '', 34);
             $this->RegisterVariableFloat('CurrentProgress', $this->Translate('Progress'), '~Progress', 36);
             $this->EnableAction('CurrentProgress');
+            $this->RegisterVariableString('CurrentPlaylist', $this->Translate('Playlist'), '~Playlist', 36);
+            $this->EnableAction('CurrentPlaylist');
 
             if ((@$this->GetIDForIdent('Cover') === false)) {
                 $coverID = IPS_CreateMedia(1);
@@ -86,6 +88,7 @@ declare(strict_types=1);
                 IPS_SetName($coverID, $this->Translate('Current Cover'));
                 IPS_SetIdent($coverID, 'Cover');
                 IPS_SetMediaFile($coverID, 'cover.' . $this->InstanceID . '.jpg', false);
+                $this->SetBuffer('CoverURL', '');
                 IPS_SetMediaContent($coverID, '');
             }
 
@@ -128,7 +131,6 @@ declare(strict_types=1);
                                 // TODO: Try block as a user could not be registered properly. In that case, we want to give some meaningful feedback
                                 try {
                                     $playlists = json_decode($this->MakeRequest('GET', 'https://api.spotify.com/v1/me/playlists'), true);
-                                    $this->SendDebug('Playlists', json_encode($playlists), 0);
                                     $userPlaylists = [];
                                     foreach ($playlists['items'] as $playlist) {
                                         $userPlaylists[] = [
@@ -227,6 +229,36 @@ declare(strict_types=1);
                     $this->SetValue('CurrentProgress', $Value);
                     $this->SetValue('CurrentPosition', $this->msToDuration($milliseconds));
                     break;
+
+                case 'CurrentPlaylist':
+                    $list = json_decode($Value, true);
+                    if (!is_array($list)) {
+                        echo $this->Translate('Current value for playlist is invalid');
+                        break;
+                    }
+                    switch ($this->GetBuffer('CurrentType')) {
+                        case 'artist':
+                            $this->SkipTracks($list['current']);
+                            break;
+
+                        case 'show':
+                        case 'album':
+                        case 'playlist':
+                            // Special handling for tracks
+                            $this->SendDebug('New Index', $list['current'], 0);
+                            $this->SendDebug('New Entry', json_encode($list['entries'][$list['current']]), 0);
+                            $body = [];
+                            $body['context_uri'] = $this->GetBuffer('CurrentURI');
+                            $body['offset'] = [
+                                'uri' => $list['entries'][$list['current']]['uri']
+                            ];
+                
+                            $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/play', json_encode($body));
+                            break;
+
+                    }
+                    $this->UpdateVariables();
+                    break;
             }
         }
 
@@ -272,7 +304,7 @@ declare(strict_types=1);
         {
             $currentPlay = $this->requestCurrentPlay();
             if ($this->isPlaybackActive($currentPlay)) {
-                $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/next');
+                $this->SkipTracks(1);
             }
         }
 
@@ -480,7 +512,9 @@ declare(strict_types=1);
                 $this->SetValue('CurrentAlbum', self::PLACEHOLDER_NONE);
                 $this->SetValue('CurrentPosition', $this->msToDuration(0));
                 $this->SetValue('CurrentProgress', 0);
+                $this->SetValue('CurrentPlaylist', '');
                 $this->SetValue('CurrentDuration', $this->msToDuration(0));
+                $this->SetBuffer('CoverURL', '');
                 IPS_SetMediaContent($this->GetIDForIdent('Cover'), '');
                 $this->SetTimerInterval('UpdateProgressTimer', 0);
                 if ($resetCommands) {
@@ -495,8 +529,8 @@ declare(strict_types=1);
                 $this->UpdateDevices();
 
                 $currentPlay = $this->requestCurrentPlay();
-                if ($this->isPlaybackActive($currentPlay)) {
-                    $this->SetValue('Action', self::PLAY);
+                if ($currentPlay !== false) {
+                    $this->SetValue('Action', $this->isPlaybackActive($currentPlay) ? self::PLAY : self::PAUSE);
                     switch ($currentPlay['repeat_state']) {
                         case 'off':
                             $this->SetValue('Repeat', self::REPEAT_OFF);
@@ -517,20 +551,39 @@ declare(strict_types=1);
 
                     $this->SetValue('CurrentPosition', $this->msToDuration($currentPlay['progress_ms']));
 
-                    $this->SetTimerInterval('UpdateProgressTimer', 1000);
+                    $this->SetTimerInterval('UpdateProgressTimer', $this->isPlaybackActive($currentPlay) ? 1000 : 0);
 
                     if (isset($currentPlay['item']['type'])) {
                         $this->SetValue('CurrentDuration', $this->msToDuration($currentPlay['item']['duration_ms']));
                         $this->SetValue('CurrentProgress', $currentPlay['progress_ms'] / $this->durationToMs($this->GetValue('CurrentDuration')) * 100);
 
-                        $loadData = function ($name, $album, $artist)
+                        $getArtist = function ($item)
+                        {
+                            $this->SendDebug('Get Artist - Item', json_encode($item), 0);
+                            switch ($item['type']) {
+                                case 'track':
+                                    $artists = [];
+                                    foreach ($item['artists'] as $artist) {
+                                        $artists[] = $artist['name'];
+                                    }
+                                    return implode(', ', $artists);
+
+                                case 'episode':
+                                    return $item['show']['publisher'];
+
+                                default:
+                                    return false;
+                            }
+                        };
+
+                        $loadData = function ($name, $albumName, $images, $artist) use ($currentPlay, $getArtist)
                         {
                             $this->SetValue('CurrentTrack', $name);
                             $this->SetValue('CurrentArtist', $artist);
-                            $this->SetValue('CurrentAlbum', $album['name']);
+                            $this->SetValue('CurrentAlbum', $albumName);
                             $coverFound = false;
-                            if (isset($album['images'])) {
-                                foreach ($album['images'] as &$imageObject) {
+                            if (isset($images)) {
+                                foreach ($images as &$imageObject) {
                                     if ((($imageObject['height'] <= $this->ReadPropertyInteger('CoverMaxHeight')) || ($this->ReadPropertyInteger('CoverMaxHeight') == 0)) &&
                                     (($imageObject['width'] <= $this->ReadPropertyInteger('CoverMaxWidth')) || ($this->ReadPropertyInteger('CoverMaxWidth') == 0))) {
                                         $coverFound = true;
@@ -543,7 +596,78 @@ declare(strict_types=1);
                                 }
                             }
                             if (!$coverFound) {
+                                $this->SetBuffer('CoverURL', '');
                                 IPS_SetMediaContent($this->GetIDForIdent('Cover'), '');
+                            }
+
+                            $resetPlaylist = true;
+                            if (isset($currentPlay['context'])) {
+                                $contextInfo = $this->MakeRequest('GET', $currentPlay['context']['href'], '', true);
+                                if (is_string($contextInfo)) {
+                                    $contextInfo = json_decode($contextInfo, true);
+                                    if (!isset($contextInfo['error'])) {
+                                        $playlistEntries = [];
+                                        $currentIndex = -1;
+                                        switch ($contextInfo['type']) {
+                                            case 'playlist':
+                                            case 'album':
+                                            case 'show':
+                                                $trackList = ($contextInfo['type'] === 'show') ?
+                                                            $contextInfo['episodes']['items'] :
+                                                            $contextInfo['tracks']['items'];
+                                                foreach ($trackList as $index => &$track) {
+                                                    if ($contextInfo['type'] === 'playlist') {
+                                                        $track = $track['track'];
+                                                    }
+                                                    $playlistEntries[] = [
+                                                        'artist'   => ($contextInfo['type'] === 'show') ? $contextInfo['publisher'] : $getArtist($track),
+                                                        'song'     => $track['name'],
+                                                        'duration' => floor($track['duration_ms'] / 1000),
+                                                        'uri'      => $track['uri']
+                                                    ];
+                                                    if ($track['id'] === $currentPlay['item']['id']) {
+                                                        $currentIndex = $index;
+                                                    }
+                                                }
+                                                break;
+
+                                            case 'artist':
+                                                // An artist provides no playlist, so we get the queue instead
+                                                $queueInfo = $this->MakeRequest('GET', 'https://api.spotify.com/v1/me/player/queue', '', true);
+                                                if (is_string($queueInfo)) {
+                                                    $queueInfo = json_decode($queueInfo, true);
+                                                    if (!isset($queueInfo['error'])) {
+                                                        $currentIndex = 0;
+                                                        $queue = $queueInfo['queue'];
+                                                        // Add the currently playing element as it is not included in the queue itself
+                                                        array_unshift($queue, $queueInfo['currently_playing']);
+                                                        foreach ($queue as $index => &$track) {
+                                                            $playlistEntries[] = [
+                                                                'artist'   => $getArtist($track),
+                                                                'song'     => $track['name'],
+                                                                'duration' => floor($track['duration_ms'] / 1000),
+                                                                'uri'      => $track['uri']
+                                                            ];
+                                                        }
+                                                    }
+                                                }
+                                                break;
+
+                                        }
+                                        if (count($playlistEntries) > 0) {
+                                            $this->SetBuffer('CurrentType', $contextInfo['type']);
+                                            $this->SetBuffer('CurrentURI', $contextInfo['uri']);
+                                            $this->SetValue('CurrentPlaylist', json_encode([
+                                                'current' => $currentIndex,
+                                                'entries' => $playlistEntries
+                                            ]));
+                                            $resetPlaylist = false;
+                                        }
+                                    }
+                                }
+                            }
+                            if ($resetPlaylist) {
+                                $this->SetValue('CurrentPlaylist', '');
                             }
                         };
 
@@ -553,11 +677,11 @@ declare(strict_types=1);
                                 foreach ($currentPlay['item']['artists'] as $artist) {
                                     $artists[] = $artist['name'];
                                 }
-                                $loadData($currentPlay['item']['name'], $currentPlay['item']['album'], implode(', ', $artists));
+                                $loadData($currentPlay['item']['name'], $currentPlay['item']['album']['name'], $currentPlay['item']['album']['images'], $getArtist($currentPlay['item']));
                                 break;
 
                             case 'episode':
-                                $loadData($currentPlay['item']['name'], $currentPlay['item']['show'], $currentPlay['item']['show']['publisher']);
+                                $loadData($currentPlay['item']['name'], $currentPlay['item']['show']['name'], $currentPlay['item']['images'], $getArtist($currentPlay['item']));
                                 break;
 
                             default:
@@ -663,7 +787,8 @@ declare(strict_types=1);
         private function requestCurrentPlay()
         {
             // The response could be false, which cannot be JSON decoded
-            $response = $this->MakeRequest('GET', 'https://api.spotify.com/v1/me/player', '', true);
+            // additional_types=episode is required in case the user hears a podcast, otherwise it is irrelevant
+            $response = $this->MakeRequest('GET', 'https://api.spotify.com/v1/me/player?additional_types=episode', '', true);
             if (is_string($response)) {
                 $result = json_decode($response, true);
                 if (isset($result['error'])) {
@@ -904,6 +1029,12 @@ declare(strict_types=1);
                 $this->WriteAttributeString('Favorites', json_encode($favorites));
                 $this->UpdateFormField('Favorites', 'values', json_encode($this->GetTranslatedFavorites()));
                 $this->UpdateFavoritesProfile();
+            }
+        }
+
+        private function SkipTracks($number) {
+            for ($i = 0; $i < $number; $i++) {
+                $this->MakeRequest('POST', 'https://api.spotify.com/v1/me/player/next');
             }
         }
     }
