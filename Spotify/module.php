@@ -523,7 +523,8 @@ declare(strict_types=1);
                         $this->SetValue('CurrentDuration', $this->msToDuration($currentPlay['item']['duration_ms']));
                         $this->SetValue('CurrentProgress', $currentPlay['progress_ms'] / $this->durationToMs($this->GetValue('CurrentDuration')) * 100);
 
-                        $loadData = function($name, $album, $artist) {
+                        $loadData = function ($name, $album, $artist)
+                        {
                             $this->SetValue('CurrentTrack', $name);
                             $this->SetValue('CurrentArtist', $artist);
                             $this->SetValue('CurrentAlbum', $album['name']);
@@ -535,7 +536,7 @@ declare(strict_types=1);
                                         $coverFound = true;
                                         if ($this->GetBuffer('CoverURL') != $imageObject['url']) {
                                             $this->SetBuffer('CoverURL', $imageObject['url']);
-                                            IPS_SetMediaContent($this->GetIDForIdent('Cover'), base64_encode(file_get_contents($imageObject['url']))); 
+                                            IPS_SetMediaContent($this->GetIDForIdent('Cover'), base64_encode(file_get_contents($imageObject['url'])));
                                         }
                                         break;
                                     }
