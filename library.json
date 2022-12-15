@@ -3,10 +3,10 @@
     "author": "Symcon GmbH",
     "name": "Spotify",
     "url": "https://www.symcon.de/",
-    "version": "1.3",
+    "version": "1.4",
     "build": 0,
     "date": 0,
     "compatibility": {
-        "version": "6.0"
+        "version": "6.4"
     }
 }
