@@ -790,12 +790,12 @@ declare(strict_types=1);
             // additional_types=episode is required in case the user hears a podcast, otherwise it is irrelevant
             $response = $this->MakeRequest('GET', 'https://api.spotify.com/v1/me/player?additional_types=episode', '', true);
             if (is_string($response)) {
-                $result = json_decode($response, true);
-                if (isset($result['error'])) {
-                    return false;
-                } else {
-                    return $result;
-                }
+                $response = json_decode($response, true);
+            }
+            if (!is_array($response)) {
+                return false;
+            } elseif (isset($response['error'])) {
+                return false;
             } else {
                 return $response;
             }
