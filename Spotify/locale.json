@@ -38,7 +38,8 @@
             "The current device does not suppport setting the volume": "Das aktuelle Gerät unterstützt keine Einstellung der Lautstärke",
             "Position": "Position",
             "Duration": "Dauer",
-            "Progress": "Fortschritt"
+            "Progress": "Fortschritt",
+            "Could not play because there is no current playback and no favorite was selected": "Konnte Wiedergabe nicht starten, da es keine aktuelle Wiedergabe gibt und kein Favorit ausgewählt wurde"
         }
     }
 }

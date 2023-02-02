@@ -279,7 +279,13 @@ declare(strict_types=1);
                 $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/play');
                 $this->SetValue('Action', self::PLAY);
             } else {
-                RequestAction($this->GetIDForIdent('Favorite'), $this->GetValue('Favorite'));
+                $favoriteValue = $this->GetValue('Favorite');
+                if ($favoriteValue === '') {
+                    echo $this->Translate('Could not play because there is no current playback and no favorite was selected');
+                }
+                else {
+                    $this->RequestAction('Favorite', $this->GetValue('Favorite'));
+                }
             }
         }
 
