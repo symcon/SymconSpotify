@@ -275,11 +275,12 @@ declare(strict_types=1);
         public function Play()
         {
             $currentPlay = $this->requestCurrentPlay();
-            if ($currentPlay) {
+            $favoriteValue = $this->GetValue('Favorite');
+            if ($currentPlay || ($favoriteValue == '')) {
                 $this->MakeRequest('PUT', 'https://api.spotify.com/v1/me/player/play');
                 $this->SetValue('Action', self::PLAY);
             } else {
-                RequestAction($this->GetIDForIdent('Favorite'), $this->GetValue('Favorite'));
+                RequestAction($this->GetIDForIdent('Favorite'), $favoriteValue);
             }
         }
 
