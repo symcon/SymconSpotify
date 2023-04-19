@@ -6,5 +6,5 @@
 
 Folgende Module beinhaltet das Spotify Repository:
 
-- __Spotify__ ([Dokumentation](Spotify))  
+- __Spotify__ ([Dokumentation](https://www.symcon.de/de/service/dokumentation/modulreferenz/spotify))  
 	Steuert die Wiedergabe von Spotify
