@@ -282,8 +282,7 @@ declare(strict_types=1);
                 $favoriteValue = $this->GetValue('Favorite');
                 if ($favoriteValue === '') {
                     echo $this->Translate('Could not play because there is no current playback and no favorite was selected');
-                }
-                else {
+                } else {
                     $this->RequestAction('Favorite', $this->GetValue('Favorite'));
                 }
             }
