@@ -237,7 +237,7 @@ class Spotify extends IPSModule
                     break;
                 }
                 switch ($this->GetBuffer('CurrentType')) {
-                    case 'artist':
+                    case 'queue':
                         $this->SkipTracks($list['current']);
                         break;
 
@@ -613,7 +613,8 @@ class Spotify extends IPSModule
                                 if (!isset($contextInfo['error'])) {
                                     $playlistEntries = [];
                                     $currentIndex = -1;
-                                    switch ($contextInfo['type']) {
+                                    $type = isset($contextInfo['type']) ? $contextInfo['type'] : 'queue';
+                                    switch ($type) {
                                         case 'playlist':
                                         case 'album':
                                         case 'show':
@@ -636,9 +637,11 @@ class Spotify extends IPSModule
                                             }
                                             break;
 
+                                        default:
                                         case 'artist':
                                             // An artist provides no playlist, so we get the queue instead
                                             $queueInfo = $this->MakeRequest('GET', 'https://api.spotify.com/v1/me/player/queue', '', true);
+                                            $type = 'queue';
                                             if (is_string($queueInfo)) {
                                                 $queueInfo = json_decode($queueInfo, true);
                                                 if (!isset($queueInfo['error'])) {
@@ -660,8 +663,9 @@ class Spotify extends IPSModule
 
                                     }
                                     if (count($playlistEntries) > 0) {
-                                        $this->SetBuffer('CurrentType', $contextInfo['type']);
-                                        $this->SetBuffer('CurrentURI', $contextInfo['uri']);
+                                        $this->SetBuffer('CurrentType', $type);
+                                        // If no URI is available, we won't need it, as we only use it for specific cases (playlist, album, show)
+                                        $this->SetBuffer('CurrentURI', isset($contextInfo['uri']) ? $contextInfo['uri'] : 'No-URI');
                                         $this->SetValue('CurrentPlaylist', json_encode([
                                             'current' => $currentIndex,
                                             'entries' => $playlistEntries
