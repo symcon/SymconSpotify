@@ -61,7 +61,7 @@ class Spotify extends IPSModule
         $this->RegisterVariableString('Device', $this->Translate('Device'), $profileNameDevices, 50);
         $this->EnableAction('Device');
 
-        $this->RegisterVariableInteger('Action', $this->Translate('Action'), '~PlaybackPreviousNext', 40);
+        $this->RegisterVariableInteger('Action', $this->Translate('Action'), '~PlaybackPreviousNextNoStop', 40);
         $this->EnableAction('Action');
 
         $this->RegisterVariableInteger('Volume', $this->Translate('Volume'), '~Volume', 45);
