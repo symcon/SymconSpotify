@@ -40,6 +40,8 @@
             "Duration": "Dauer",
             "Progress": "Fortschritt",
             "Could not play because there is no current playback and no favorite was selected": "Konnte Wiedergabe nicht starten, da es keine aktuelle Wiedergabe gibt und kein Favorit ausgewählt wurde",
+            "Not authorized. Please authorize Spotify via the module configuration.": "Nicht autorisiert. Bitte Spotify über die Modulkonfiguration autorisieren.",
+            "Spotify authorization expired. Please re-authorize via the module configuration.": "Spotify-Autorisierung abgelaufen. Bitte über die Modulkonfiguration erneut autorisieren.",
             "https://www.symcon.de/en/service/documentation/module-reference/spotify/": "https://www.symcon.de/de/service/dokumentation/modulreferenz/spotify/"
         }
     }

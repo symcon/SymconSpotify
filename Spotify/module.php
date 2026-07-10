@@ -891,12 +891,18 @@ class Spotify extends IPSModule
 
             $this->SendDebug('FetchAccessToken', 'Use Refresh Token to get new Access Token!', 0);
 
+            $refreshToken = $this->ReadAttributeString('Token');
+            if ($refreshToken === '') {
+                $this->SetStatus(104);
+                throw new Exception($this->Translate('Not authorized. Please authorize Spotify via the module configuration.'));
+            }
+
             //If we slipped here we need to fetch the access token
             $options = [
                 'http' => [
                     'header'        => "Content-Type: application/x-www-form-urlencoded\r\n",
                     'method'        => 'POST',
-                    'content'       => http_build_query(['refresh_token' => $this->ReadAttributeString('Token')]),
+                    'content'       => http_build_query(['refresh_token' => $refreshToken]),
                     'ignore_errors' => true
                 ]
             ];
@@ -907,6 +913,15 @@ class Spotify extends IPSModule
 
             if (!isset($data->token_type) || $data->token_type != 'Bearer') {
                 $this->SetStatus(104);
+                // Refresh tokens now expire after 6 months (Spotify change effective 2026-07-20).
+                // An invalid_grant error means the stored token is expired or revoked.
+                // Discard it immediately so the user is prompted to re-authorize.
+                if (isset($data->error) && $data->error === 'invalid_grant') {
+                    $this->SendDebug('FetchAccessToken', 'Refresh Token expired (invalid_grant) - discarding stored token', 0);
+                    $this->WriteAttributeString('Token', '');
+                    $this->SetBuffer('AccessToken', '');
+                    throw new Exception($this->Translate('Spotify authorization expired. Please re-authorize via the module configuration.'));
+                }
                 throw new Exception('Bearer Token expected');
             }
 
